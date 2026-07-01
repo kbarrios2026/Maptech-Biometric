@@ -33,6 +33,7 @@ class PullDeviceUserDatabase extends Command
     public function handle(): int
     {
         $deviceId = $this->option('device');
+        /** @var \App\Models\BiometricDevice|null $device */
         $device = BiometricDevice::find($deviceId);
 
         if (! $device) {
@@ -122,6 +123,7 @@ class PullDeviceUserDatabase extends Command
                     }
 
                     // Check if employee exists
+                    /** @var \App\Models\Employee|null $employee */
                     $employee = Employee::where('biometric_id', $biometricId)->first();
 
                     if ($employee) {

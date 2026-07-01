@@ -5,6 +5,7 @@ $app = require __DIR__ . '/../bootstrap/app.php';
 $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
+/** @var \App\Models\BiometricDevice|null $device */
 $device = \App\Models\BiometricDevice::first();
 
 if ($device) {
@@ -18,9 +19,11 @@ if ($device) {
     echo "Sync Mode: " . ucfirst($device->sync_mode) . "\n";
     
     // Count recent attendance
+    /** @var int $recent */
     $recent = \App\Models\Attendance::where('source', $device->name)->count();
     echo "Total Attendance Records: $recent\n";
     
+    /** @var \Illuminate\Database\Eloquent\Collection $today */
     $today = \App\Models\Attendance::where('source', $device->name)
         ->where('attendance_date', now()->toDateString())
         ->count();

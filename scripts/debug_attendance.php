@@ -4,6 +4,7 @@ $app = require 'bootstrap/app.php';
 $k = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $k->bootstrap();
 
+/** @var \App\Models\BiometricDevice|null $device */
 $device = \App\Models\BiometricDevice::find(1);
 echo 'Device 1 name: ' . $device?->name . PHP_EOL;
 

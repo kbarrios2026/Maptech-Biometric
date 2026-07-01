@@ -55,9 +55,11 @@ class PullDeviceUsers extends Command
             $this->info("📊 Found {$totalWithAttendance} employees with attendance records");
 
             // Get employees that exist in the system
+            /** @var array $allEmployees */
             $allEmployees = Employee::pluck('id')->toArray();
 
             // Find employees with attendance that don't have full records (auto-created placeholders)
+            /** @var \Illuminate\Database\Eloquent\Collection $placeholderEmployees */
             $placeholderEmployees = Employee::whereIn('id', $employeesWithAttendance)
                 ->where('first_name', 'Device User')
                 ->orWhere('email', 'like', 'device.user.%@system.local')
@@ -67,6 +69,7 @@ class PullDeviceUsers extends Command
             $this->info("👥 Found {$placeholderCount} placeholder employees auto-created from device");
 
             // Check for any biometric IDs without employees
+            /** @var array $biometricIds */
             $biometricIds = Employee::pluck('biometric_id')->filter()->toArray();
             $totalBiometricIds = count($biometricIds);
             $this->info("🔑 Total unique biometric IDs in system: {$totalBiometricIds}");

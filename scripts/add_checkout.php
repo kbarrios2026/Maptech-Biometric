@@ -10,6 +10,7 @@ use Illuminate\Support\Carbon;
 $now = Carbon::now();
 
 // Find the Auto User 21 record from today
+/** @var \Illuminate\Database\Eloquent\Builder $attendance */
 $attendance = \App\Models\Attendance::where('employee_id', 5)
     ->where('attendance_date', today())
     ->orderBy('id', 'desc')

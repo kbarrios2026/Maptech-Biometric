@@ -43,6 +43,7 @@ class SyncDeviceData extends Command
 
         // Show employees from device
         $this->info("👥 Employees (from device scans):");
+        /** @var \Illuminate\Database\Eloquent\Collection $deviceEmployees */
         $deviceEmployees = Employee::where('biometric_id', '!=', null)
             ->orderBy('biometric_id')
             ->limit(10)
@@ -70,6 +71,7 @@ class SyncDeviceData extends Command
 
         // Show recent attendance
         $this->info("📝 Recent Attendance Records:");
+        /** @var \Illuminate\Database\Eloquent\Collection $recentRecords */
         $recentRecords = Attendance::where('source', $device->name)
             ->with('employee')
             ->orderBy('attendance_date', 'desc')
