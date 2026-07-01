@@ -427,11 +427,18 @@
      */
     function refreshAttendance() {
         const tbody = document.getElementById('attendanceBody');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
         fetch('{{ route("admin.biometric-devices.recent-attendance", $biometricDevice) }}', {
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            signal: controller.signal
         })
-        .then(res => res.json())
+        .then(res => {
+            clearTimeout(timeoutId);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.json();
+        })
         .then(data => {
             if (!data.attendances || data.attendances.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No attendance records yet.</td></tr>';
@@ -451,8 +458,13 @@
                 </tr>
             `).join('');
         })
-        .catch(() => {
-            // Silently fail on auto-refresh
+        .catch(err => {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-warning"><i class="fas fa-hourglass-end"></i> Request timed out. Retrying...</td></tr>';
+            } else {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load attendance data</td></tr>';
+            }
         });
     }
 
