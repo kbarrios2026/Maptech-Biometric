@@ -171,7 +171,7 @@ class IclockController extends Controller
 
             $date    = $ts->toDateString();
             $time    = $ts->format('H:i:s');
-            $isLate  = $time > '09:00:00';
+            $isLate  = $time > '08:00:00';
 
             $attendance = Attendance::firstOrNew([
                 'employee_id'     => $employee->id,

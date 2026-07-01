@@ -126,6 +126,6 @@ class ZktecoAttendanceService
             return 'Half Day';
         }
 
-        return $time > '09:00:00' ? 'Late' : 'Present';
+        return $time > '08:00:00' ? 'Late' : 'Present';
     }
 }
