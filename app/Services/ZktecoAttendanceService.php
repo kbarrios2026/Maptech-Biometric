@@ -1,0 +1,131 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Attendance;
+use App\Models\BiometricDevice;
+use App\Models\Employee;
+use App\Models\EmployeeDevice;
+use Carbon\Carbon;
+use Illuminate\Support\Arr;
+
+class ZktecoAttendanceService
+{
+    public function processLogs(BiometricDevice $device, array $logs): int
+    {
+        $records = $this->normalizeLogs($logs);
+        $processed = 0;
+
+        foreach ($records as $log) {
+            $employee = $this->resolveEmployee($log);
+            if (! $employee) {
+                continue;
+            }
+
+            $timestamp = $this->resolveTimestamp($log);
+            if (! $timestamp) {
+                continue;
+            }
+
+            $date = $timestamp->toDateString();
+            $time = $timestamp->format('H:i:s');
+            $status = $this->resolveStatus($log, $time);
+
+            $attendance = Attendance::firstOrNew([
+                'employee_id' => $employee->id,
+                'attendance_date' => $date,
+            ]);
+
+            if (! $attendance->exists) {
+                $attendance->check_in_time = $time;
+                $attendance->check_out_time = null;
+                $attendance->status = $status;
+            } else {
+                if (empty($attendance->check_in_time) || $time < $attendance->check_in_time) {
+                    $attendance->check_in_time = $time;
+                }
+
+                if (empty($attendance->check_out_time) || $time > $attendance->check_out_time) {
+                    $attendance->check_out_time = $time;
+                }
+
+                if ($attendance->status === 'Absent') {
+                    $attendance->status = $status;
+                }
+            }
+
+            $attendance->source = $device->name;
+            $attendance->save();
+            $processed++;
+        }
+
+        $device->forceFill(['last_synced_at' => now()])->save();
+
+        return $processed;
+    }
+
+    protected function normalizeLogs(array $logs): array
+    {
+        if (Arr::isAssoc($logs)) {
+            return [$logs];
+        }
+
+        return $logs;
+    }
+
+    protected function resolveEmployee(array $log): ?Employee
+    {
+        $identifier = $log['biometric_id']
+            ?? $log['employee_id']
+            ?? $log['enroll_id']
+            ?? $log['pin']
+            ?? $log['user_id']
+            ?? null;
+
+        if (! $identifier) {
+            return null;
+        }
+
+        return Employee::where('biometric_id', (string) $identifier)->first()
+            ?? Employee::where('employee_id', (string) $identifier)->first()
+            ?? optional(EmployeeDevice::where('device_identifier', (string) $identifier)->with('employee')->first())->employee;
+    }
+
+    protected function resolveTimestamp(array $log): ?Carbon
+    {
+        $value = $log['timestamp']
+            ?? $log['time']
+            ?? $log['datetime']
+            ?? $log['punch_time']
+            ?? null;
+
+        if (! $value) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    protected function resolveStatus(array $log, string $time): string
+    {
+        $status = strtolower((string) ($log['status'] ?? $log['event'] ?? $log['type'] ?? ''));
+
+        if (str_contains($status, 'leave')) {
+            return 'Leave';
+        }
+
+        if (str_contains($status, 'absent')) {
+            return 'Absent';
+        }
+
+        if (str_contains($status, 'half')) {
+            return 'Half Day';
+        }
+
+        return $time > '09:00:00' ? 'Late' : 'Present';
+    }
+}
