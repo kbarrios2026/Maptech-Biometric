@@ -94,7 +94,17 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <!-- Test Connection -->
+                        @if($biometricDevice->sync_mode === 'push')
+                        <!-- Push Mode: Configuration Instructions -->
+                        <div class="col-12">
+                            <div class="alert alert-info mb-0">
+                                <h6 class="alert-heading mb-2"><i class="fas fa-broadcast-tower"></i> Push Mode Active</h6>
+                                <p class="small mb-2">Your device is configured to <strong>send data to your server</strong>. No connection test needed.</p>
+                                <p class="small mb-0"><strong>Next Step:</strong> Configure the webhook URL below in your device's settings via the web interface at <code>http://{{ $biometricDevice->ip_address }}:8000</code></p>
+                            </div>
+                        </div>
+                        @else
+                        <!-- Pull Mode: Test Connection -->
                         <div class="col-12">
                             <button type="button" class="btn btn-primary w-100 py-2" id="testConnectionBtn" onclick="testConnection()">
                                 <i class="fas fa-plug"></i> Test Connection
@@ -102,7 +112,6 @@
                             <div id="connectionResult" class="mt-2"></div>
                         </div>
 
-                        @if($biometricDevice->sync_mode === 'pull')
                         <!-- Sync Attendance (Pull Mode) -->
                         <div class="col-12">
                             <button type="button" class="btn btn-success w-100 py-2" id="syncBtn" onclick="syncAttendance()">
@@ -112,30 +121,18 @@
                         </div>
                         @endif
 
-                        @if($biometricDevice->sync_mode === 'push')
-                        <!-- Enable Push Mode -->
-                        <div class="col-12">
-                            <button type="button" class="btn btn-info w-100 py-2" id="enablePushBtn" onclick="enablePush()">
-                                <i class="fas fa-broadcast-tower"></i> Enable Push Mode
-                            </button>
-                            <div id="pushResult" class="mt-2"></div>
-                        </div>
-                        @endif
-
                         <!-- Webhook URL (Push Mode) -->
-                        @if($biometricDevice->sync_mode === 'push')
                         <div class="col-12">
                             <hr class="my-2">
                             <label class="form-label fw-bold small mb-2"><i class="fas fa-link"></i> Webhook URL</label>
+                            <p class="text-muted small mb-2">Copy this URL and paste it into your device's web interface settings at <code>http://{{ $biometricDevice->ip_address }}:8000</code></p>
                             <div class="input-group input-group-sm">
                                 <input type="text" class="form-control font-monospace" id="webhookUrl" value="{{ $webhookUrl }}" readonly style="background-color: #f8f9fa; font-size: 0.75rem;">
                                 <button class="btn btn-outline-primary btn-sm" type="button" onclick="copyWebhookUrl()" title="Copy to clipboard">
                                     <i class="fas fa-copy"></i> Copy
                                 </button>
                             </div>
-                            <small class="text-muted d-block mt-1">Configure this in your device's push settings</small>
                         </div>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -146,7 +143,71 @@
     @if($biometricDevice->sync_mode === 'push')
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-light border-bottom py-3">
-            <h5 class="card-title mb-0"><i class="fas fa-cog text-info"></i> Configuration Guide</h5>
+            <h5 class="card-title mb-0"><i class="fas fa-list-check text-info"></i> Setup Instructions</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning mb-4">
+                <h6 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Action Required</h6>
+                <p class="mb-2">Your device is in <strong>push mode</strong>. You must configure it to send data to your server.</p>
+                <p class="mb-0"><strong>Follow these steps:</strong></p>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="d-flex gap-3 mb-4">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 1.2rem;">1</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Access Device Web Interface</h6>
+                            <p class="text-muted small mb-0">Open your browser and navigate to:</p>
+                            <code class="bg-light p-2 d-block rounded mt-1">http://{{ $biometricDevice->ip_address }}:8000</code>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 1.2rem;">2</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Log In</h6>
+                            <p class="text-muted small mb-0">Use default credentials (usually admin/admin or admin/123456)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="d-flex gap-3 mb-4">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 1.2rem;">3</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Configure Server Settings</h6>
+                            <p class="text-muted small mb-2">Navigate to: <strong>Settings → Network → Server</strong></p>
+                            <p class="text-muted small mb-0">Set:</p>
+                            <ul class="small text-muted ps-3 mb-0">
+                                <li>Server IP: <code>{{ $connectionGuide['server_ip'] ?? '-' }}</code></li>
+                                <li>Server Port: <code>{{ $connectionGuide['server_port'] ?? '-' }}</code></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 1.2rem;">4</div>
+                        <div>
+                            <h6 class="fw-bold mb-1">Set Webhook URL</h6>
+                            <p class="text-muted small mb-2">Navigate to: <strong>Settings → Server → Push Webhook</strong></p>
+                            <p class="text-muted small mb-0">Paste this URL:</p>
+                            <code class="bg-light p-2 d-block rounded mt-1 text-break" style="font-size: 0.75rem;">{{ $webhookUrl }}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-4 mb-0">
+                <i class="fas fa-lightbulb"></i> <strong>Tip:</strong> After configuring, scan a fingerprint on the device to test. The attendance record should appear in this system within seconds.
+            </div>
+        </div>
+    </div>
+    @else
+    <!-- Pull Mode Configuration Guide -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light border-bottom py-3">
+            <h5 class="card-title mb-0"><i class="fas fa-cog text-info"></i> Configuration Guide (Pull Mode)</h5>
         </div>
         <div class="card-body">
             <div class="row g-3">
@@ -175,32 +236,6 @@
                             <code class="bg-light p-2 rounded d-block">{{ $connectionGuide['device_port'] ?? '-' }}</code>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <hr class="my-3">
-
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <h6 class="fw-bold mb-2 text-muted">Webhook URLs</h6>
-                    <div class="small">
-                        <div class="mb-2">
-                            <span class="text-muted d-block mb-1">Short Token:</span>
-                            <code class="bg-light p-2 rounded d-block text-break" style="font-size: 0.75rem;">{{ $connectionGuide['short_token'] ?? '-' }}</code>
-                        </div>
-                        <div>
-                            <span class="text-muted d-block mb-1">Recommended URL (short):</span>
-                            <code class="bg-light p-2 rounded d-block text-break" style="font-size: 0.75rem;">{{ $connectionGuide['recommended_url'] ?? $webhookUrl }}</code>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <h6 class="fw-bold mb-2 text-muted">Tips</h6>
-                    <ul class="small mb-0 ps-3 text-muted">
-                        @foreach(($connectionGuide['recommended_notes'] ?? []) as $note)
-                        <li>{{ $note }}</li>
-                        @endforeach
-                    </ul>
                 </div>
             </div>
         </div>
