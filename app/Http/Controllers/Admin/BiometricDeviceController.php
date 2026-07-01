@@ -224,9 +224,7 @@ class BiometricDeviceController extends Controller
      */
     private function buildWebhookUrl(BiometricDevice $biometricDevice): string
     {
-        $baseUrl = rtrim((string) config('app.url', request()->getSchemeAndHttpHost()), '/');
-
-        return $baseUrl . route('device.zkteco.attendance', $biometricDevice->device_token, false);
+        return route('zkteco.webhook', $biometricDevice->device_token, false);
     }
 
     /**
@@ -236,8 +234,7 @@ class BiometricDeviceController extends Controller
     {
         $parsedUrl = parse_url($webhookUrl);
         $shortToken = $this->buildShortToken($biometricDevice);
-        $baseUrl = rtrim((string) config('app.url', request()->getSchemeAndHttpHost()), '/');
-        $shortUrl = $baseUrl . route('device.zkteco.attendance', $shortToken, false);
+        $shortUrl = route('zkteco.webhook', $shortToken, false);
 
         return [
             'server_ip' => $parsedUrl['host'] ?? parse_url((string) config('app.url', ''), PHP_URL_HOST),

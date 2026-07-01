@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::post('/zkteco/webhook/{deviceToken}', [ZktecoWebhookController::class, 'store']);
+Route::post('/zkteco/webhook/{deviceToken}', [ZktecoWebhookController::class, 'store'])->name('zkteco.webhook');
 
 // ZKTeco ADMS push protocol endpoints (device-initiated connection)
 // Configure your ZKTeco device's "Server Address" to point here.
