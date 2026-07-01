@@ -301,8 +301,9 @@
         </div>
     </div>
 </div>
+@endsection
 
-@push('scripts')
+@section('scripts')
 <script>
     let autoRefreshInterval = null;
 
@@ -470,5 +471,4 @@
         });
     }
 </script>
-@endpush
 @endsection
