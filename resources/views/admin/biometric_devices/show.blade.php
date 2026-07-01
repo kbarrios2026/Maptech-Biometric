@@ -4,26 +4,33 @@
 
 @section('content')
 <div class="content-wrapper">
-    <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h1 class="h3">{{ $biometricDevice->name }}</h1>
-            <div>
-                <a href="{{ route('admin.biometric-devices.edit', $biometricDevice) }}" class="btn btn-secondary">Edit</a>
-                <a href="{{ route('admin.biometric-devices.index') }}" class="btn btn-outline-secondary">Back</a>
-            </div>
+<div class=\"row mb-4\">
+        <div class=\"col-md-6\">
+            <h1 class=\"h3\"><i class=\"fas fa-fingerprint\"></i> {{ $biometricDevice->name }}</h1>
+            <small class=\"text-muted d-block\">
+                Serial: <code>{{ $biometricDevice->serial_number ?? '-' }}</code> | 
+                Address: {{ $biometricDevice->ip_address }}:{{ $biometricDevice->port ?? 4370 }}
+            </small>
+        </div>
+        <div class=\"col-md-6 text-end\">
+            <a href=\"{{ route('admin.biometric-devices.edit', $biometricDevice) }}\" class=\"btn btn-warning\"><i class=\"fas fa-edit\"></i> Edit</a>
+            <a href=\"{{ route('admin.biometric-devices.index') }}\" class=\"btn btn-outline-secondary\"><i class=\"fas fa-arrow-left\"></i> Back</a>
         </div>
     </div>
 
     @if(session('success'))
-    <div class="alert alert-success">{{ session('success') }}</div>
+    <div class=\"alert alert-success alert-dismissible fade show\" role=\"alert\">
+        <i class=\"fas fa-check-circle\"></i> {{ session('success') }}
+        <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\" aria-label=\"Close\"></button>
+    </div>
     @endif
 
     <div class="row">
         <!-- Device Info -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Device Information</h5>
+        <div class=\"col-lg-4 mb-4\">
+            <div class=\"card h-100 border-0 shadow-sm\">
+                <div class=\"card-header bg-light border-bottom\">
+                    <h5 class=\"card-title mb-0\"><i class=\"fas fa-info-circle\"></i> Device Information</h5>
                 </div>
                 <div class="card-body">
                     <dl class="row mb-0">

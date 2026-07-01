@@ -5,14 +5,15 @@
 @section('content')
 <div class="content-wrapper">
     <div class="row mb-4">
-        <div class="col-12 d-flex justify-content-between align-items-center">
-            <h1 class="h3"><i class="fas fa-fingerprint"></i> Biometric Devices</h1>
-            <a href="{{ route('admin.biometric-devices.create') }}" class="btn btn-primary">Add Device</a>
-        </div>
+        <div class="col-md-6"><h1 class="h3"><i class="fas fa-fingerprint"></i> Biometric Devices</h1></div>
+        <div class="col-md-6 text-end"><a href="{{ route('admin.biometric-devices.create') }}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Device</a></div>
     </div>
 
     @if(session('success'))
-    <div class="alert alert-success">{{ session('success') }}</div>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
     @endif
 
     <div class="card">
@@ -21,8 +22,8 @@
                 <thead class="table-light">
                     <tr>
                         <th>Name</th>
-                        <th>Serial</th>
-                        <th>IP</th>
+                        <th>Serial Number</th>
+                        <th>IP Address</th>
                         <th>Port</th>
                         <th>Sync Mode</th>
                         <th>Active</th>
@@ -32,31 +33,46 @@
                 <tbody>
                     @forelse($devices as $device)
                     <tr>
-                        <td>{{ $device->name }}</td>
-                        <td>{{ $device->serial_number ?? '-' }}</td>
+                        <td><strong>{{ $device->name }}</strong></td>
+                        <td><code>{{ $device->serial_number ?? '-' }}</code></td>
                         <td>{{ $device->ip_address ?? '-' }}</td>
-                        <td>{{ $device->port }}</td>
-                        <td>{{ ucfirst($device->sync_mode) }}</td>
-                        <td>{{ $device->is_active ? 'Yes' : 'No' }}</td>
+                        <td>{{ $device->port ?? 4370 }}</td>
                         <td>
-                            <a href="{{ route('admin.biometric-devices.show', $device) }}" class="btn btn-sm btn-outline-primary">View</a>
-                            <a href="{{ route('admin.biometric-devices.edit', $device) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                            <form action="{{ route('admin.biometric-devices.destroy', $device) }}" method="POST" class="d-inline">
+                            <span class="badge {{ $device->sync_mode === 'push' ? 'bg-primary' : 'bg-info' }}">
+                                {{ ucfirst($device->sync_mode) }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge {{ $device->is_active ? 'bg-success' : 'bg-secondary' }}">
+                                {{ $device->is_active ? 'Active' : 'Inactive' }}
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ route('admin.biometric-devices.show', $device) }}" class="btn btn-sm btn-info" title="View"><i class="fas fa-eye"></i></a>
+                            <a href="{{ route('admin.biometric-devices.edit', $device) }}" class="btn btn-sm btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+                            <form action="{{ route('admin.biometric-devices.destroy', $device) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this device?')">
                                 @csrf
                                 @method('DELETE')
-                                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete device?')">Delete</button>
+                                <button type="submit" class="btn btn-sm btn-danger" title="Delete"><i class="fas fa-trash"></i></button>
                             </form>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="text-center text-muted">No devices found.</td>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fs-3 mb-3 d-block"></i>
+                            <strong>No devices found</strong><br>
+                            <small>Add your first biometric device to get started.</small>
+                        </td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="card-footer">{{ $devices->links() }}</div>
     </div>
+
+    @if($devices->hasPages())
+    <div class="d-flex justify-content-center mt-4">{{ $devices->links() }}</div>
+    @endif
 </div>
 @endsection
