@@ -4,80 +4,95 @@
 
 @section('content')
 <div class="content-wrapper">
-<div class=\"row mb-4 align-items-center\">
-        <div class=\"col-md-8\">
-            <h1 class=\"h2 mb-0\"><i class=\"fas fa-fingerprint text-primary\"></i> {{ $biometricDevice->name }}</h1>
-            <small class=\"text-muted d-block mt-1\">
-                <i class=\"fas fa-barcode\"></i> Serial: <code>{{ $biometricDevice->serial_number ?? '-' }}</code> | 
-                <i class=\"fas fa-network-wired\"></i> Address: <code>{{ $biometricDevice->ip_address }}:{{ $biometricDevice->port ?? 4370 }}</code>
-            </small>
-        </div>
-        <div class=\"col-md-4 text-end\">
-            <a href=\"{{ route('admin.biometric-devices.edit', $biometricDevice) }}\" class=\"btn btn-warning btn-sm\"><i class=\"fas fa-edit\"></i> Edit Device</a>
-            <a href=\"{{ route('admin.biometric-devices.index') }}\" class=\"btn btn-outline-secondary btn-sm\"><i class=\"fas fa-arrow-left\"></i> Back</a>
-        </div>
-    </div>
-
-    @if(session('success'))
-    <div class=\"alert alert-success alert-dismissible fade show\" role=\"alert\">
-        <i class=\"fas fa-check-circle\"></i> {{ session('success') }}
-        <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\" aria-label=\"Close\"></button>
-    </div>
-    @endif
-
-    <div class="row">
-        <!-- Device Info -->
-        <div class=\"col-lg-4 mb-4\">
-            <div class=\"card h-100 border-0 shadow-sm\">
-                <div class=\"card-header\" style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;\">
-                    <h5 class=\"card-title mb-0\"><i class=\"fas fa-info-circle\"></i> Device Information</h5>
+    <!-- Header with Device Status -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="h3 mb-1"><i class="fas fa-fingerprint"></i> {{ $biometricDevice->name }}</h1>
+                    <div class="small opacity-75">
+                        <i class="fas fa-barcode"></i> <code style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">{{ $biometricDevice->serial_number ?? '-' }}</code>
+                        <span class="mx-2">•</span>
+                        <i class="fas fa-network-wired"></i> <code style="background: rgba(255,255,255,0.15); padding: 2px 6px; border-radius: 4px;">{{ $biometricDevice->ip_address }}:{{ $biometricDevice->port ?? 4370 }}</code>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-1"><i class="fas fa-barcode"></i> Serial Number</small>
-                        <code class="d-block bg-light p-2 rounded">{{ $biometricDevice->serial_number ?? '-' }}</code>
-                    </div>
-
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-1"><i class="fas fa-network-wired"></i> IP Address</small>
-                        <code class="d-block bg-light p-2 rounded">{{ $biometricDevice->ip_address ?? '-' }}</code>
-                    </div>
-
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-1"><i class="fas fa-plug"></i> Port</small>
-                        <code class="d-block bg-light p-2 rounded">{{ $biometricDevice->port }}</code>
-                    </div>
-
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-1"><i class="fas fa-exchange-alt"></i> Sync Mode</small>
-                        <span class="badge bg-{{ $biometricDevice->sync_mode === 'push' ? 'info' : 'warning' }} fs-6">
+                <div class="col-auto text-end">
+                    <div class="mb-2">
+                        <span class="badge bg-light text-dark me-2">
                             <i class="fas fa-{{ $biometricDevice->sync_mode === 'push' ? 'arrow-down' : 'arrow-up' }}"></i> 
-                            {{ ucfirst($biometricDevice->sync_mode) }}
+                            {{ ucfirst($biometricDevice->sync_mode) }} Mode
                         </span>
-                    </div>
-
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-1"><i class="fas fa-toggle-on"></i> Status</small>
-                        <span class="badge bg-{{ $biometricDevice->is_active ? 'success' : 'danger' }} fs-6">
+                        <span class="badge bg-{{ $biometricDevice->is_active ? 'success' : 'danger' }}">
                             <i class="fas fa-{{ $biometricDevice->is_active ? 'check-circle' : 'times-circle' }}"></i> 
                             {{ $biometricDevice->is_active ? 'Active' : 'Inactive' }}
                         </span>
                     </div>
+                    <div class="text-nowrap">
+                        <a href="{{ route('admin.biometric-devices.edit', $biometricDevice) }}" class="btn btn-light btn-sm"><i class="fas fa-edit"></i> Edit</a>
+                        <a href="{{ route('admin.biometric-devices.index') }}" class="btn btn-outline-light btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-1"><i class="fas fa-history"></i> Last Synced</small>
-                        <div class="bg-light p-2 rounded small">
-                            {{ $biometricDevice->last_synced_at ? $biometricDevice->last_synced_at->diffForHumans() : 'Never' }}
+    @if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        <i class="fas fa-check-circle"></i> {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    @endif
+
+    <!-- Main Content Grid -->
+    <div class="row g-4 mb-4">
+        <!-- Device Details (Left) -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light border-bottom py-3">
+                    <h5 class="card-title mb-0"><i class="fas fa-info-circle text-primary"></i> Device Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block fw-bold mb-1">Serial Number</small>
+                            <code class="bg-light p-2 rounded d-block text-break">{{ $biometricDevice->serial_number ?? '-' }}</code>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block fw-bold mb-1">Port</small>
+                            <code class="bg-light p-2 rounded d-block">{{ $biometricDevice->port }}</code>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block fw-bold mb-1">IP Address</small>
+                            <code class="bg-light p-2 rounded d-block text-break">{{ $biometricDevice->ip_address ?? '-' }}</code>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block fw-bold mb-1">Last Synced</small>
+                            <div class="bg-light p-2 rounded small">
+                                {{ $biometricDevice->last_synced_at ? $biometricDevice->last_synced_at->diffForHumans() : 'Never' }}
+                            </div>
                         </div>
                     </div>
 
                     @if($biometricDevice->notes)
                     <div>
-                        <small class="text-muted d-block mb-1"><i class="fas fa-sticky-note"></i> Notes</small>
-                        <div class="bg-light p-2 rounded small">{{ $biometricDevice->notes }}</div>
+                        <small class="text-muted d-block fw-bold mb-1">Notes</small>
+                        <div class="bg-light p-2 rounded small text-break">{{ $biometricDevice->notes }}</div>
                     </div>
                     @endif
                 </div>
+            </div>
+        </div>
+
+        <!-- Device Actions (Right) -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-light border-bottom py-3">
+                    <h5 class="card-title mb-0"><i class="fas fa-sliders-h text-danger"></i> Device Actions</h5>
+                </div>
+                <div class="card-body"
             </div>
         </div>
 
@@ -88,105 +103,119 @@
                     <h5 class=\"card-title mb-0\"><i class=\"fas fa-sliders-h\"></i> Device Actions</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Test Connection -->
-                    <div class="mb-4">
-                        <button type="button" class="btn btn-primary w-100" id="testConnectionBtn" onclick="testConnection()">
-                            <i class="fas fa-plug"></i> Test Connection
-                        </button>
-                        <div id="connectionResult" class="mt-2"></div>
-                    </div>
-
-                    @if($biometricDevice->sync_mode === 'pull')
-                    <!-- Sync Attendance (Pull Mode) -->
-                    <div class="mb-4">
-                        <button type="button" class="btn btn-success w-100" id="syncBtn" onclick="syncAttendance()">
-                            <i class="fas fa-sync"></i> Sync Attendance Now
-                        </button>
-                        <div id="syncResult" class="mt-2"></div>
-                    </div>
-                    @endif
-
-                    @if($biometricDevice->sync_mode === 'push')
-                    <!-- Enable Push Mode -->
-                    <div class="mb-4">
-                        <button type="button" class="btn btn-info w-100" id="enablePushBtn" onclick="enablePush()">
-                            <i class="fas fa-broadcast-tower"></i> Enable Push Mode
-                        </button>
-                        <div id="pushResult" class="mt-2"></div>
-                    </div>
-                    @endif
-
-                    <!-- Webhook URL (Push Mode) -->
-                    @if($biometricDevice->sync_mode === 'push')
-                    <hr>
-                    <div class="mb-4">
-                        <label class="form-label fw-bold mb-2"><i class="fas fa-link"></i> Webhook URL</label>
-                        <p class="text-muted small mb-2">Configure this URL in your ZKTeco device's push settings. Use the server IP shown below, not localhost.</p>
-                        <div class="input-group input-group-lg">
-                            <input type="text" class="form-control font-monospace" id="webhookUrl" value="{{ $webhookUrl }}" readonly style="font-size: 0.9rem; background-color: #f8f9fa;">
-                            <button class="btn btn-outline-primary" type="button" onclick="copyWebhookUrl()" title="Copy to clipboard">
-                                <i class="fas fa-copy"></i> Copy
+                    <div class="row g-3">
+                        <!-- Test Connection -->
+                        <div class="col-12">
+                            <button type="button" class="btn btn-primary w-100 py-2" id="testConnectionBtn" onclick="testConnection()">
+                                <i class="fas fa-plug"></i> Test Connection
                             </button>
+                            <div id="connectionResult" class="mt-2"></div>
                         </div>
-                    </div>
 
-                    <div class="card card-sm border-info">
-                        <div class="card-header bg-info bg-opacity-10 border-info">
-                            <h6 class="card-title mb-0"><i class="fas fa-cog text-info"></i> Recommended Device Connection Settings</h6>
+                        @if($biometricDevice->sync_mode === 'pull')
+                        <!-- Sync Attendance (Pull Mode) -->
+                        <div class="col-12">
+                            <button type="button" class="btn btn-success w-100 py-2" id="syncBtn" onclick="syncAttendance()">
+                                <i class="fas fa-sync"></i> Sync Attendance Now
+                            </button>
+                            <div id="syncResult" class="mt-2"></div>
                         </div>
-                        <div class="card-body small">
-                            <div class="row mb-2">
-                                <div class="col-6">
-                                    <strong class="d-block text-muted">Server IP / Host</strong>
-                                    <code class="text-dark">{{ $connectionGuide['server_ip'] ?? '-' }}</code>
-                                </div>
-                                <div class="col-6">
-                                    <strong class="d-block text-muted">Server Port</strong>
-                                    <code class="text-dark">{{ $connectionGuide['server_port'] ?? '-' }}</code>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong class="d-block text-muted">Device IP</strong>
-                                    <code class="text-dark">{{ $connectionGuide['device_ip'] ?? '-' }}</code>
-                                </div>
-                                <div class="col-6">
-                                    <strong class="d-block text-muted">Device Port</strong>
-                                    <code class="text-dark">{{ $connectionGuide['device_port'] ?? '-' }}</code>
-                                </div>
-                            </div>
+                        @endif
 
-                            <div class="alert alert-light border border-info mt-3 mb-0 small">
-                                <div class="mb-2">
-                                    <strong>Short webhook:</strong>
-                                    <code class="d-block bg-white p-2 rounded mt-1 text-break">{{ $connectionGuide['recommended_url'] ?? $webhookUrl }}</code>
-                                </div>
-                                <div class="mb-2">
-                                    <strong>Full webhook:</strong>
-                                    <code class="d-block bg-white p-2 rounded mt-1 text-break" style="font-size: 0.75rem;">{{ $connectionGuide['full_url'] ?? $webhookUrl }}</code>
-                                </div>
-                                <div>
-                                    <strong>Short token:</strong>
-                                    <code class="d-block bg-white p-2 rounded mt-1 text-break">{{ $connectionGuide['short_token'] ?? '-' }}</code>
-                                </div>
-                                @if(!empty($connectionGuide['recommended_notes']))
-                                <div class="mt-3">
-                                    <strong class="d-block mb-2">Configuration Tips:</strong>
-                                    <ul class="mb-0 ps-3">
-                                        @foreach($connectionGuide['recommended_notes'] as $note)
-                                        <li class="text-secondary">{{ $note }}</li>
-                                        @endforeach
-                                    </ul>
-                                </div>
-                                @endif
-                            </div>
+                        @if($biometricDevice->sync_mode === 'push')
+                        <!-- Enable Push Mode -->
+                        <div class="col-12">
+                            <button type="button" class="btn btn-info w-100 py-2" id="enablePushBtn" onclick="enablePush()">
+                                <i class="fas fa-broadcast-tower"></i> Enable Push Mode
+                            </button>
+                            <div id="pushResult" class="mt-2"></div>
                         </div>
+                        @endif
+
+                        <!-- Webhook URL (Push Mode) -->
+                        @if($biometricDevice->sync_mode === 'push')
+                        <div class="col-12">
+                            <hr class="my-2">
+                            <label class="form-label fw-bold small mb-2"><i class="fas fa-link"></i> Webhook URL</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control font-monospace" id="webhookUrl" value="{{ $webhookUrl }}" readonly style="background-color: #f8f9fa; font-size: 0.75rem;">
+                                <button class="btn btn-outline-primary btn-sm" type="button" onclick="copyWebhookUrl()" title="Copy to clipboard">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                            <small class="text-muted d-block mt-1">Configure this in your device's push settings</small>
+                        </div>
+                        @endif
                     </div>
-                    @endif
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Connection Guide (Full Width) -->
+    @if($biometricDevice->sync_mode === 'push')
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-light border-bottom py-3">
+            <h5 class="card-title mb-0"><i class="fas fa-cog text-info"></i> Configuration Guide</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h6 class="fw-bold mb-3 text-muted">Server Settings</h6>
+                    <div class="row small">
+                        <div class="col-6 mb-3">
+                            <span class="text-muted d-block mb-1">IP Address</span>
+                            <code class="bg-light p-2 rounded d-block">{{ $connectionGuide['server_ip'] ?? '-' }}</code>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <span class="text-muted d-block mb-1">Port</span>
+                            <code class="bg-light p-2 rounded d-block">{{ $connectionGuide['server_port'] ?? '-' }}</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold mb-3 text-muted">Device Settings</h6>
+                    <div class="row small">
+                        <div class="col-6 mb-3">
+                            <span class="text-muted d-block mb-1">IP Address</span>
+                            <code class="bg-light p-2 rounded d-block">{{ $connectionGuide['device_ip'] ?? '-' }}</code>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <span class="text-muted d-block mb-1">Port</span>
+                            <code class="bg-light p-2 rounded d-block">{{ $connectionGuide['device_port'] ?? '-' }}</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h6 class="fw-bold mb-2 text-muted">Webhook URLs</h6>
+                    <div class="small">
+                        <div class="mb-2">
+                            <span class="text-muted d-block mb-1">Short Token:</span>
+                            <code class="bg-light p-2 rounded d-block text-break" style="font-size: 0.75rem;">{{ $connectionGuide['short_token'] ?? '-' }}</code>
+                        </div>
+                        <div>
+                            <span class="text-muted d-block mb-1">Recommended URL (short):</span>
+                            <code class="bg-light p-2 rounded d-block text-break" style="font-size: 0.75rem;">{{ $connectionGuide['recommended_url'] ?? $webhookUrl }}</code>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold mb-2 text-muted">Tips</h6>
+                    <ul class="small mb-0 ps-3 text-muted">
+                        @foreach(($connectionGuide['recommended_notes'] ?? []) as $note)
+                        <li>{{ $note }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
     <!-- Recent Attendance Feed -->
     <div class="card shadow-sm mt-4">
