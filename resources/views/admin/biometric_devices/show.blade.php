@@ -277,9 +277,9 @@
                         <th><i class="fas fa-user"></i> Employee</th>
                         <th><i class="fas fa-id-badge"></i> Biometric ID</th>
                         <th><i class="fas fa-calendar"></i> Date</th>
-                        <th><i class="fas fa-sign-in-alt"></i> Check In</th>
-                        <th><i class="fas fa-sign-out-alt"></i> Check Out</th>
-                        <th><i class="fas fa-tag"></i> Status</th>
+                        <th><i class="fas fa-sign-in-alt"></i> Time In</th>
+                        <th><i class="fas fa-sign-out-alt"></i> Time Out</th>
+                        <th><i class="fas fa-tag"></i> Time-In Status</th>
                         <th><i class="fas fa-database"></i> Source</th>
                         <th><i class="fas fa-clock"></i> Recorded</th>
                     </tr>
