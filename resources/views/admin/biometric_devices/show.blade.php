@@ -427,6 +427,15 @@
      */
     function refreshAttendance() {
         const tbody = document.getElementById('attendanceBody');
+        const btn = document.querySelector('button[onclick*="refreshAttendance"]');
+        
+        // Show visual feedback
+        if (btn) {
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+        }
+        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
@@ -464,6 +473,13 @@
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center text-warning"><i class="fas fa-hourglass-end"></i> Request timed out. Retrying...</td></tr>';
             } else {
                 tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> Failed to load attendance data</td></tr>';
+            }
+        })
+        .finally(() => {
+            // Restore button
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-redo"></i> Refresh';
             }
         });
     }
