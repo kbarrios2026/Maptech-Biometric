@@ -1,0 +1,58 @@
+[
+    {
+        "id": 7,
+        "biometric_id": "12",
+        "first_name": "Auto",
+        "last_name": "User 12",
+        "email": "auto.employee.7b52009b64fd@maptech.local"
+    },
+    {
+        "id": 8,
+        "biometric_id": "13",
+        "first_name": "Auto",
+        "last_name": "User 13",
+        "email": "auto.employee.bd307a3ec329@maptech.local"
+    },
+    {
+        "id": 6,
+        "biometric_id": "14",
+        "first_name": "Auto",
+        "last_name": "User 14",
+        "email": "auto.employee.fa35e192121e@maptech.local"
+    },
+    {
+        "id": 5,
+        "biometric_id": "21",
+        "first_name": "Auto",
+        "last_name": "User 21",
+        "email": "auto.employee.472b07b9fcf2@maptech.local"
+    },
+    {
+        "id": 11,
+        "biometric_id": "22",
+        "first_name": "Auto",
+        "last_name": "User 22",
+        "email": "auto.employee.12c6fc06c99a@maptech.local"
+    },
+    {
+        "id": 10,
+        "biometric_id": "23",
+        "first_name": "Auto",
+        "last_name": "User 23",
+        "email": "auto.employee.d435a6cdd786@maptech.local"
+    },
+    {
+        "id": 4,
+        "biometric_id": "24",
+        "first_name": "Stephen Von",
+        "last_name": "Ramos",
+        "email": "von@maptech.com"
+    },
+    {
+        "id": 12,
+        "biometric_id": "26",
+        "first_name": "Auto",
+        "last_name": "User 26",
+        "email": "auto.employee.887309d048be@maptech.local"
+    }
+]

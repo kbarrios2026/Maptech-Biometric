@@ -1,0 +1,162 @@
+[
+    {
+        "id": 25,
+        "employee_name": "Stephen Von Ramos",
+        "biometric_id": "24",
+        "date": "2026-06-30T16:00:00.000000Z",
+        "time_in": "09:15:30",
+        "time_out": null,
+        "status": "Late",
+        "recorded_at": "2026-07-01T06:37:08+08:00"
+    },
+    {
+        "id": 27,
+        "employee_name": "Auto User 21",
+        "biometric_id": "21",
+        "date": "2026-06-30T16:00:00.000000Z",
+        "time_in": "07:22:14",
+        "time_out": "07:23:44",
+        "status": "Present",
+        "recorded_at": "2026-07-01T07:22:14+08:00"
+    },
+    {
+        "id": 26,
+        "employee_name": "Auto User 22",
+        "biometric_id": "22",
+        "date": "2026-06-30T16:00:00.000000Z",
+        "time_in": "08:45:00",
+        "time_out": null,
+        "status": "Late",
+        "recorded_at": "2026-07-01T06:37:08+08:00"
+    },
+    {
+        "id": 17,
+        "employee_name": "Auto User 13",
+        "biometric_id": "13",
+        "date": "2026-06-23T16:00:00.000000Z",
+        "time_in": "08:06:42",
+        "time_out": null,
+        "status": "Late",
+        "recorded_at": "2026-06-24T02:06:04+08:00"
+    },
+    {
+        "id": 16,
+        "employee_name": "Auto User 21",
+        "biometric_id": "21",
+        "date": "2026-06-23T16:00:00.000000Z",
+        "time_in": "07:51:07",
+        "time_out": "07:51:08",
+        "status": "Present",
+        "recorded_at": "2026-06-24T02:06:04+08:00"
+    },
+    {
+        "id": 18,
+        "employee_name": "Auto User 12",
+        "biometric_id": "12",
+        "date": "2026-06-23T16:00:00.000000Z",
+        "time_in": "08:12:03",
+        "time_out": null,
+        "status": "Late",
+        "recorded_at": "2026-06-24T02:06:04+08:00"
+    },
+    {
+        "id": 19,
+        "employee_name": "Auto User 23",
+        "biometric_id": "23",
+        "date": "2026-06-23T16:00:00.000000Z",
+        "time_in": "08:28:45",
+        "time_out": null,
+        "status": "Late",
+        "recorded_at": "2026-06-24T02:06:04+08:00"
+    },
+    {
+        "id": 20,
+        "employee_name": "Auto User 22",
+        "biometric_id": "22",
+        "date": "2026-06-23T16:00:00.000000Z",
+        "time_in": "08:28:57",
+        "time_out": null,
+        "status": "Late",
+        "recorded_at": "2026-06-24T02:06:04+08:00"
+    },
+    {
+        "id": 21,
+        "employee_name": "Stephen Von Ramos",
+        "biometric_id": "24",
+        "date": "2026-06-23T16:00:00.000000Z",
+        "time_in": "08:35:59",
+        "time_out": "10:15:07",
+        "status": "Late",
+        "recorded_at": "2026-06-24T02:06:04+08:00"
+    },
+    {
+        "id": 23,
+        "employee_name": "Auto User 26",
+        "biometric_id": "26",
+        "date": "2026-06-23T16:00:00.000000Z",
+        "time_in": "09:52:13",
+        "time_out": "10:17:46",
+        "status": "Late",
+        "recorded_at": "2026-06-24T02:06:04+08:00"
+    },
+    {
+        "id": 3,
+        "employee_name": "Stephen Von Ramos",
+        "biometric_id": "24",
+        "date": "2026-06-22T16:00:00.000000Z",
+        "time_in": "09:58:19",
+        "time_out": "13:22:51",
+        "status": "Late",
+        "recorded_at": "2026-06-23T02:09:35+08:00"
+    },
+    {
+        "id": 7,
+        "employee_name": "Stephen Von Ramos",
+        "biometric_id": "24",
+        "date": "2026-06-21T16:00:00.000000Z",
+        "time_in": "10:03:38",
+        "time_out": "15:16:00",
+        "status": "Late",
+        "recorded_at": "2026-06-23T05:18:20+08:00"
+    },
+    {
+        "id": 6,
+        "employee_name": "Stephen Von Ramos",
+        "biometric_id": "24",
+        "date": "2026-06-17T16:00:00.000000Z",
+        "time_in": "09:35:57",
+        "time_out": null,
+        "status": "Late",
+        "recorded_at": "2026-06-23T05:18:20+08:00"
+    },
+    {
+        "id": 5,
+        "employee_name": "Stephen Von Ramos",
+        "biometric_id": "24",
+        "date": "2026-06-16T16:00:00.000000Z",
+        "time_in": "08:49:51",
+        "time_out": "15:08:33",
+        "status": "Late",
+        "recorded_at": "2026-06-23T05:18:19+08:00"
+    },
+    {
+        "id": 4,
+        "employee_name": "Stephen Von Ramos",
+        "biometric_id": "24",
+        "date": "2026-06-10T16:00:00.000000Z",
+        "time_in": "16:16:20",
+        "time_out": null,
+        "status": "Late",
+        "recorded_at": "2026-06-23T05:18:18+08:00"
+    },
+    {
+        "id": 1,
+        "employee_name": "Unknown",
+        "biometric_id": "N/A",
+        "date": "2026-06-10T16:00:00.000000Z",
+        "time_in": "08:30:00",
+        "time_out": null,
+        "status": "Late",
+        "recorded_at": "2026-06-11T08:11:05+08:00"
+    }
+]
