@@ -46,7 +46,7 @@
     <!-- Main Content Grid -->
     <div class="row g-4 mb-4">
         <!-- Device Details (Left) -->
-        <div class="col-lg-5">
+        <div class="col-lg-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-light border-bottom py-3">
                     <h5 class="card-title mb-0"><i class="fas fa-info-circle text-primary"></i> Device Details</h5>
@@ -87,7 +87,7 @@
         </div>
 
         <!-- Device Actions (Right) -->
-        <div class="col-lg-7">
+        <div class="col-lg-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-light border-bottom py-3">
                     <h5 class="card-title mb-0"><i class="fas fa-sliders-h text-danger"></i> Device Actions</h5>
@@ -100,7 +100,7 @@
                             <div class="alert alert-info mb-0">
                                 <h6 class="alert-heading mb-2"><i class="fas fa-broadcast-tower"></i> Push Mode Active</h6>
                                 <p class="small mb-2">Your device is configured to <strong>send data to your server</strong>. No connection test needed.</p>
-                                <p class="small mb-0"><strong>Next Step:</strong> Configure the webhook URL below in your device's settings via the web interface at <code>http://{{ $biometricDevice->ip_address }}:8000</code></p>
+                                <p class="small mb-0"><strong>Next Step:</strong> Follow the setup instructions below to configure the webhook URL in your device's web interface.</p>
                             </div>
                         </div>
                         @else
@@ -119,13 +119,12 @@
                             </button>
                             <div id="syncResult" class="mt-2"></div>
                         </div>
-                        @endif
 
-                        <!-- Webhook URL (Push Mode) -->
+                        <!-- Webhook URL (Pull Mode) -->
                         <div class="col-12">
                             <hr class="my-2">
                             <label class="form-label fw-bold small mb-2"><i class="fas fa-link"></i> Webhook URL</label>
-                            <p class="text-muted small mb-2">Copy this URL and paste it into your device's web interface settings at <code>http://{{ $biometricDevice->ip_address }}:8000</code></p>
+                            <p class="text-muted small mb-2">This webhook URL is available if you switch to push mode:</p>
                             <div class="input-group input-group-sm">
                                 <input type="text" class="form-control font-monospace" id="webhookUrl" value="{{ $webhookUrl }}" readonly style="background-color: #f8f9fa; font-size: 0.75rem;">
                                 <button class="btn btn-outline-primary btn-sm" type="button" onclick="copyWebhookUrl()" title="Copy to clipboard">
@@ -133,6 +132,7 @@
                                 </button>
                             </div>
                         </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -152,47 +152,60 @@
                 <p class="mb-0"><strong>Follow these steps:</strong></p>
             </div>
 
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="d-flex gap-3 mb-4">
-                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 1.2rem;">1</div>
-                        <div>
-                            <h6 class="fw-bold mb-1">Access Device Web Interface</h6>
-                            <p class="text-muted small mb-0">Open your browser and navigate to:</p>
-                            <code class="bg-light p-2 d-block rounded mt-1">http://{{ $biometricDevice->ip_address }}:8000</code>
+            <div class="row g-4">
+                <!-- Step 1 -->
+                <div class="col-12">
+                    <div class="d-flex gap-3">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">1</div>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-2">Access Device Web Interface</h6>
+                            <p class="text-muted small mb-2">Open your browser and navigate to:</p>
+                            <code class="bg-light p-2 d-block rounded text-break">http://{{ $biometricDevice->ip_address }}:8000</code>
                         </div>
                     </div>
+                </div>
 
+                <!-- Step 2 -->
+                <div class="col-12">
                     <div class="d-flex gap-3">
-                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 1.2rem;">2</div>
-                        <div>
-                            <h6 class="fw-bold mb-1">Log In</h6>
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">2</div>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-2">Log In</h6>
                             <p class="text-muted small mb-0">Use default credentials (usually admin/admin or admin/123456)</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <div class="d-flex gap-3 mb-4">
-                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 1.2rem;">3</div>
-                        <div>
-                            <h6 class="fw-bold mb-1">Configure Server Settings</h6>
+                <!-- Step 3 -->
+                <div class="col-12">
+                    <div class="d-flex gap-3">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">3</div>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-2">Configure Server Settings</h6>
                             <p class="text-muted small mb-2">Navigate to: <strong>Settings → Network → Server</strong></p>
-                            <p class="text-muted small mb-0">Set:</p>
-                            <ul class="small text-muted ps-3 mb-0">
-                                <li>Server IP: <code>{{ $connectionGuide['server_ip'] ?? '-' }}</code></li>
-                                <li>Server Port: <code>{{ $connectionGuide['server_port'] ?? '-' }}</code></li>
-                            </ul>
+                            <p class="text-muted small mb-2">Set the following:</p>
+                            <div class="bg-light p-3 rounded small text-muted">
+                                <div class="mb-2"><i class="fas fa-network-wired text-primary"></i> <strong>Server IP:</strong> <code>{{ $connectionGuide['server_ip'] ?? '-' }}</code></div>
+                                <div><i class="fas fa-plug text-primary"></i> <strong>Server Port:</strong> <code>{{ $connectionGuide['server_port'] ?? '-' }}</code></div>
+                            </div>
                         </div>
                     </div>
+                </div>
 
+                <!-- Step 4 -->
+                <div class="col-12">
                     <div class="d-flex gap-3">
-                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px; font-size: 1.2rem;">4</div>
-                        <div>
-                            <h6 class="fw-bold mb-1">Set Webhook URL</h6>
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">4</div>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold mb-2">Set Webhook URL</h6>
                             <p class="text-muted small mb-2">Navigate to: <strong>Settings → Server → Push Webhook</strong></p>
-                            <p class="text-muted small mb-0">Paste this URL:</p>
-                            <code class="bg-light p-2 d-block rounded mt-1 text-break" style="font-size: 0.75rem;">{{ $webhookUrl }}</code>
+                            <p class="text-muted small mb-2">Paste this webhook URL:</p>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control font-monospace" id="webhookUrlSetup" value="{{ $webhookUrl }}" readonly style="background-color: #f8f9fa; font-size: 0.75rem;">
+                                <button class="btn btn-outline-primary btn-sm" type="button" onclick="copyWebhookUrl()" title="Copy to clipboard">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
