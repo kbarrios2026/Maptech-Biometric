@@ -179,9 +179,19 @@ class IclockController extends Controller
             ]);
 
             if (! $attendance->exists) {
-                $attendance->check_in_time  = $time;
-                $attendance->check_out_time = null;
-                $attendance->status         = $isLate ? 'Late' : 'Present';
+                // Option 2: Check if first scan is checkout (status=1), mark it correctly
+                if ($status === 1) {
+                    // First scan is checkout - mark as checkout instead of check-in
+                    $attendance->check_in_time  = null;
+                    $attendance->check_out_time = $time;
+                    $attendance->status         = 'Present';
+                    // Option 3: Log warning for orphaned checkout
+                    Log::warning("ADMS: Orphaned checkout for employee {$employee->id} on {$date} at {$time}. No check-in recorded.");
+                } else {
+                    $attendance->check_in_time  = $time;
+                    $attendance->check_out_time = null;
+                    $attendance->status         = $isLate ? 'Late' : 'Present';
+                }
             } else {
                 if ($status === 1 || (! empty($attendance->check_in_time) && $time > $attendance->check_in_time)) {
                     $attendance->check_out_time = $time;
