@@ -92,16 +92,6 @@
                 <div class="card-header bg-light border-bottom py-3">
                     <h5 class="card-title mb-0"><i class="fas fa-sliders-h text-danger"></i> Device Actions</h5>
                 </div>
-                <div class="card-body"
-            </div>
-        </div>
-
-        <!-- Actions Panel -->
-        <div class="col-md-6 mb-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class=\"card-header\" style=\"background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;\">
-                    <h5 class=\"card-title mb-0\"><i class=\"fas fa-sliders-h\"></i> Device Actions</h5>
-                </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <!-- Test Connection -->
