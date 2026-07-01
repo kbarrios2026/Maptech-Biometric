@@ -19,7 +19,7 @@ class AttendanceController extends Controller
             ->orderBy('check_in_time')
             ->get();
 
-        $employees = Employee::orderBy('first_name')->get();
+        $employees = Employee::orderBy('first_name', 'asc')->get();
 
         return view('admin.attendance.index', compact('attendances', 'date', 'employees'));
     }
@@ -30,8 +30,8 @@ class AttendanceController extends Controller
         $dateTo = $request->get('date_to', now()->toDateString());
         $employeeId = $request->get('employee_id');
 
-        $employees = Employee::orderBy('first_name')->get();
-        $selectedEmployee = $employeeId ? Employee::find($employeeId) : null;
+        $employees = Employee::orderBy('first_name', 'asc')->get();
+        $selectedEmployee = $employeeId ? Employee::findOrFail($employeeId) : null;
 
         $query = Attendance::with(['employee.department', 'employee.position', 'employee.status'])
             ->whereBetween('attendance_date', [$dateFrom, $dateTo]);
@@ -60,7 +60,7 @@ class AttendanceController extends Controller
         $dateTo = $request->get('date_to', now()->toDateString());
         $employeeId = $request->get('employee_id');
 
-        $employee = ($scope === 'single' && $employeeId) ? Employee::find($employeeId) : null;
+        $employee = ($scope === 'single' && $employeeId) ? Employee::findOrFail($employeeId) : null;
 
         $query = Attendance::with(['employee.department', 'employee.position', 'employee.status'])
             ->whereBetween('attendance_date', [$dateFrom, $dateTo]);

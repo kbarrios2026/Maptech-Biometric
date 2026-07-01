@@ -156,8 +156,8 @@
                 <!-- Step 1 -->
                 <div class="col-12">
                     <div class="d-flex gap-3">
-                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">1</div>
-                        <div class="flex-grow-1">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">1</div>
+                        <div class="grow">
                             <h6 class="fw-bold mb-2">Access Device Web Interface</h6>
                             <p class="text-muted small mb-2">Open your browser and navigate to:</p>
                             <code class="bg-light p-2 d-block rounded text-break">http://{{ $biometricDevice->ip_address }}:8000</code>
@@ -168,8 +168,8 @@
                 <!-- Step 2 -->
                 <div class="col-12">
                     <div class="d-flex gap-3">
-                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">2</div>
-                        <div class="flex-grow-1">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">2</div>
+                        <div class="grow">
                             <h6 class="fw-bold mb-2">Log In</h6>
                             <p class="text-muted small mb-0">Use default credentials (usually admin/admin or admin/123456)</p>
                         </div>
@@ -179,8 +179,8 @@
                 <!-- Step 3 -->
                 <div class="col-12">
                     <div class="d-flex gap-3">
-                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">3</div>
-                        <div class="flex-grow-1">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">3</div>
+                        <div class="grow">
                             <h6 class="fw-bold mb-2">Configure Server Settings</h6>
                             <p class="text-muted small mb-2">Navigate to: <strong>Settings → Network → Server</strong></p>
                             <p class="text-muted small mb-2">Set the following:</p>
@@ -195,8 +195,8 @@
                 <!-- Step 4 -->
                 <div class="col-12">
                     <div class="d-flex gap-3">
-                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">4</div>
-                        <div class="flex-grow-1">
+                        <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">4</div>
+                        <div class="grow">
                             <h6 class="fw-bold mb-2">Set Webhook URL</h6>
                             <p class="text-muted small mb-2">Navigate to: <strong>Settings → Server → Push Webhook</strong></p>
                             <p class="text-muted small mb-2">Paste this webhook URL:</p>
