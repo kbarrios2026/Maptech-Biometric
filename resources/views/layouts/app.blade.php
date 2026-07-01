@@ -700,6 +700,11 @@
                             <i class="fas fa-file-lines"></i><span class="nav-text">HR Admin DTR</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link @if(request()->routeIs('admin.biometric-devices.*')) active @endif" href="{{ route('admin.biometric-devices.index') }}">
+                            <i class="fas fa-fingerprint"></i><span class="nav-text">Biometric Devices</span>
+                        </a>
+                    </li>
                     @endif
 
                     @if(auth()->user()->hasRole(['Super Admin', 'HR Admin']))

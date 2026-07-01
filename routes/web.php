@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SystemUserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Device\IclockController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -52,6 +53,16 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::resource('employment-types', \App\Http\Controllers\Admin\EmploymentTypeController::class);
         Route::resource('employee-statuses', \App\Http\Controllers\Admin\EmployeeStatusController::class);
         Route::resource('employee-devices', \App\Http\Controllers\Admin\EmployeeDeviceController::class);
+    });
+
+    // Biometric Devices
+    Route::middleware('role:Super Admin,HR Admin')->group(function () {
+        Route::resource('biometric-devices', \App\Http\Controllers\Admin\BiometricDeviceController::class);
+        Route::post('biometric-devices/{biometricDevice}/test-connection', [\App\Http\Controllers\Admin\BiometricDeviceController::class, 'testConnection'])->name('biometric-devices.test-connection');
+        Route::post('biometric-devices/{biometricDevice}/sync', [\App\Http\Controllers\Admin\BiometricDeviceController::class, 'syncAttendance'])->name('biometric-devices.sync');
+        Route::post('biometric-devices/{biometricDevice}/enable-push', [\App\Http\Controllers\Admin\BiometricDeviceController::class, 'enablePush'])->name('biometric-devices.enable-push');
+        Route::get('biometric-devices/{biometricDevice}/webhook-url', [\App\Http\Controllers\Admin\BiometricDeviceController::class, 'getWebhookUrl'])->name('biometric-devices.webhook-url');
+        Route::get('biometric-devices/{biometricDevice}/recent-attendance', [\App\Http\Controllers\Admin\BiometricDeviceController::class, 'recentAttendance'])->name('biometric-devices.recent-attendance');
     });
 
     // Roles Management - Super Admin only
