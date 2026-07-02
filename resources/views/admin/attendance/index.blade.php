@@ -7,7 +7,7 @@
     <div class="row mb-4 align-items-center">
         <div class="col-md-6">
             <h1 class="h3"><i class="fas fa-calendar-check"></i> Attendance</h1>
-            <div class="text-muted">Daily attendance records for {{ 
+            <div class="text-muted">Daily attendance records for {{
                 \Illuminate\Support\Carbon::parse($date)->format('M d, Y') }}
             </div>
         </div>

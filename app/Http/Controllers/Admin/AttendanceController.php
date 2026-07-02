@@ -51,8 +51,16 @@ class AttendanceController extends Controller
         $otherCount = $totalCount - $presentCount - $lateCount;
 
         return view('admin.attendance.hr_admin', compact(
-            'attendances', 'dateFrom', 'dateTo', 'employees', 'employeeId', 'selectedEmployee',
-            'totalCount', 'presentCount', 'lateCount', 'otherCount'
+            'attendances',
+            'dateFrom',
+            'dateTo',
+            'employees',
+            'employeeId',
+            'selectedEmployee',
+            'totalCount',
+            'presentCount',
+            'lateCount',
+            'otherCount'
         ));
     }
 
@@ -80,7 +88,12 @@ class AttendanceController extends Controller
         $totalEmployees = $attendances->pluck('employee_id')->unique()->count();
 
         return view('admin.attendance.receipt', compact(
-            'attendances', 'scope', 'employee', 'dateFrom', 'dateTo', 'totalEmployees'
+            'attendances',
+            'scope',
+            'employee',
+            'dateFrom',
+            'dateTo',
+            'totalEmployees'
         ));
     }
 
