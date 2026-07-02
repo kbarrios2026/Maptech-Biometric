@@ -164,8 +164,12 @@
                             </td>
                             <td>{{ $attendance->employee?->department?->name ?? '-' }}</td>
                             <td>{{ $attendance->attendance_date?->format('M d, Y') ?? '-' }}</td>
-                            <td>{{ $attendance->check_in_time ?? '-' }}</td>
-                            <td>{{ $attendance->check_out_time ?? '-' }}</td>
+                            <td>
+                                {{ $attendance->check_in_time ? \Illuminate\Support\Carbon::createFromFormat('H:i:s', $attendance->check_in_time)->format('h:i:s A') : '-' }}
+                            </td>
+                            <td>
+                                {{ $attendance->check_out_time ? \Illuminate\Support\Carbon::createFromFormat('H:i:s', $attendance->check_out_time)->format('h:i:s A') : '-' }}
+                            </td>
                             <td>
                                 <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : 'bg-secondary') }}">
                                     {{ $attendance->status }}
@@ -356,6 +360,58 @@
     .hr-attendance-table th {
         vertical-align: middle;
         font-size: .92rem;
+    }
+
+    body.dark-mode .toolbar-bar {
+        background: #192238;
+        border-color: #2a3f5a;
+    }
+
+    body.dark-mode .toolbar-bar-print {
+        background: #0f172a;
+    }
+
+    body.dark-mode .toolbar-chip {
+        background: #2a3f5a;
+        color: #cbd5e1;
+    }
+
+    body.dark-mode .report-preview {
+        border-color: #2a3f5a;
+        background: linear-gradient(180deg, #192238 0%, #111a2b 100%);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    body.dark-mode .report-logo-slot {
+        border-color: #334155;
+        color: #94a3b8;
+        background: #0f172a;
+    }
+
+    body.dark-mode .report-title {
+        color: #e2e8f0;
+    }
+
+    body.dark-mode .report-meta {
+        color: #cbd5e1;
+    }
+
+    body.dark-mode .report-block {
+        border-color: #334155;
+        background: #0f172a;
+    }
+
+    body.dark-mode .report-label {
+        color: #94a3b8;
+    }
+
+    body.dark-mode .report-value {
+        color: #e2e8f0;
+    }
+
+    body.dark-mode .report-footer {
+        border-top-color: #334155;
+        color: #94a3b8 !important;
     }
 
     @media (max-width: 1199.98px) {

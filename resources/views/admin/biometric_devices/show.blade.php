@@ -3,7 +3,7 @@
 @section('title', 'View Biometric Device')
 
 @section('content')
-<div class="content-wrapper">
+<div class="content-wrapper biometric-device-show">
     <!-- Header with Device Status -->
     <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
         <div class="card-body">
@@ -301,6 +301,62 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('styles')
+<style>
+    body.dark-mode .biometric-device-show .card-header.bg-light,
+    body.dark-mode .biometric-device-show .card-footer.bg-light,
+    body.dark-mode .biometric-device-show .bg-light {
+        background-color: #192238 !important;
+        color: #e2e8f0 !important;
+        border-color: #2a3f5a !important;
+    }
+
+    body.dark-mode .biometric-device-show .bg-white {
+        background-color: #192238 !important;
+        color: #e2e8f0 !important;
+        border-color: #2a3f5a !important;
+    }
+
+    body.dark-mode .biometric-device-show code {
+        background-color: #0f172a !important;
+        color: #cbd5e1 !important;
+        border: 1px solid #334155;
+    }
+
+    body.dark-mode .biometric-device-show .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    body.dark-mode .biometric-device-show .alert-warning {
+        background: rgba(245, 158, 11, 0.12);
+        color: #fde68a;
+        border-left: 4px solid #f59e0b;
+    }
+
+    body.dark-mode .biometric-device-show .alert-info {
+        background: rgba(14, 116, 144, 0.18);
+        color: #cffafe;
+        border-left: 4px solid #0e7490;
+    }
+
+    body.dark-mode .biometric-device-show #webhookUrl,
+    body.dark-mode .biometric-device-show #webhookUrlSetup {
+        background-color: #0f172a !important;
+        color: #cbd5e1;
+        border-color: #334155;
+    }
+
+    body.dark-mode .biometric-device-show .table thead.table-light th {
+        background: #192238;
+    }
+
+    body.dark-mode .biometric-device-show .card.border-0.shadow-sm.mb-4 .badge.bg-light.text-dark {
+        background: #334155 !important;
+        color: #e2e8f0 !important;
+    }
+</style>
 @endsection
 
 @section('scripts')

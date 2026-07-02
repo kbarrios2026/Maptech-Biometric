@@ -11,6 +11,8 @@ use App\Http\Controllers\Admin\SystemUserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Device\IclockController;
+use App\Http\Controllers\Device\ZktecoWebhookController;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -18,6 +20,22 @@ Route::get('/', function () {
         ? redirect()->route('admin.dashboard')
         : redirect()->route('login');
 });
+
+// Device compatibility endpoints (non-/api paths used by some ZKTeco firmware)
+Route::prefix('iclock')->name('iclock.compat.')->group(function () {
+    Route::get('/cdata', [IclockController::class, 'cdata'])->name('cdata');
+    Route::post('/cdata', [IclockController::class, 'postCdata'])
+        ->withoutMiddleware([VerifyCsrfToken::class])
+        ->name('cdata.post');
+    Route::get('/getrequest', [IclockController::class, 'getRequest'])->name('getrequest');
+    Route::post('/devicecmd', [IclockController::class, 'deviceCmd'])
+        ->withoutMiddleware([VerifyCsrfToken::class])
+        ->name('devicecmd');
+});
+
+Route::post('/zkteco/webhook/{deviceToken}', [ZktecoWebhookController::class, 'store'])
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('zkteco.webhook.compat');
 
 // Authentication Routes
 Route::middleware('guest')->group(function () {

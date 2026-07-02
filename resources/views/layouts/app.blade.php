@@ -587,6 +587,49 @@
         body.dark-mode .alert-success { background: rgba(34,197,94,.1); color: #86efac; }
         body.dark-mode .alert-danger { background: rgba(239,68,68,.1); color: #fca5a5; }
 
+        /* ── Pagination ── */
+        .pagination {
+            margin-bottom: 0;
+            gap: 4px;
+        }
+        .pagination .page-link {
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            color: #334155;
+            min-width: 36px;
+            text-align: center;
+        }
+        .pagination .page-item.active .page-link {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #fff;
+        }
+        .pagination .page-item.disabled .page-link {
+            color: #94a3b8;
+            background: #f8fafc;
+            border-color: var(--border-color);
+        }
+        body.dark-mode .pagination .page-link {
+            background: #192238;
+            border-color: #2a3f5a;
+            color: #cbd5e1;
+        }
+        body.dark-mode .pagination .page-link:hover {
+            background: #23334a;
+            color: #e2e8f0;
+            border-color: #3b82f6;
+        }
+        body.dark-mode .pagination .page-item.active .page-link {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+        body.dark-mode .pagination .page-item.disabled .page-link {
+            color: #64748b;
+            background: #0f172a;
+            border-color: #1e293b;
+        }
+
         /* ── Mobile sidebar overlay ── */
         .sidebar-overlay {
             display: none;
