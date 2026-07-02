@@ -255,7 +255,7 @@
             border-color: #2a3f5a;
             background: #192238;
         }
-        .card-body { 
+        .card-body {
             padding: 20px;
             color: var(--text-primary);
         }
@@ -283,23 +283,23 @@
             border-color: #2a3f5a;
             background: #192238;
         }
-        .stat-card:hover { 
-            box-shadow: 0 6px 16px rgba(0,0,0,.12); 
-            transform: translateY(-2px); 
+        .stat-card:hover {
+            box-shadow: 0 6px 16px rgba(0,0,0,.12);
+            transform: translateY(-2px);
         }
-        .stat-card .stat-label { 
-            font-size: .78rem; 
-            font-weight: 600; 
-            color: var(--text-secondary); 
-            text-transform: uppercase; 
-            letter-spacing: .05em; 
+        .stat-card .stat-label {
+            font-size: .78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: .05em;
         }
-        .stat-card .stat-value { 
-            font-size: 1.9rem; 
-            font-weight: 700; 
-            color: var(--text-primary); 
-            line-height: 1.1; 
-            margin-top: 2px; 
+        .stat-card .stat-value {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.1;
+            margin-top: 2px;
         }
         .stat-icon {
             width: 56px;
@@ -344,7 +344,7 @@
         .page-subtitle { color: var(--text-secondary); font-size: .85rem; margin: 2px 0 0; }
 
         /* ── Tables ── */
-        .table { 
+        .table {
             font-size: .875rem;
             color: var(--text-primary);
             background: var(--bg-secondary);
@@ -364,25 +364,25 @@
         body.dark-mode .table-light th {
             background: #192238;
         }
-        .table tbody tr { 
+        .table tbody tr {
             transition: background .15s ease;
             border-color: var(--border-color);
         }
         body.dark-mode .table tbody tr {
             background: #1e293b;
         }
-        body.dark-mode .table tbody tr:hover { 
+        body.dark-mode .table tbody tr:hover {
             background: #263449;
         }
-        body:not(.dark-mode) .table tbody tr:hover { 
-            background: #f8fafc; 
+        body:not(.dark-mode) .table tbody tr:hover {
+            background: #f8fafc;
         }
         .table tbody td {
             background: inherit;
         }
-        .table td { 
-            padding: 12px 14px; 
-            vertical-align: middle; 
+        .table td {
+            padding: 12px 14px;
+            vertical-align: middle;
             border-color: rgba(255,255,255,.05);
             color: var(--text-primary);
         }
@@ -407,9 +407,9 @@
         body.dark-mode .btn-light:hover { background: #334155; }
 
         /* Action buttons - eye-comfortable colors for dark mode */
-        .btn-info { 
-            background: #06b6d4; 
-            border-color: #06b6d4; 
+        .btn-info {
+            background: #06b6d4;
+            border-color: #06b6d4;
             color: #fff;
             font-weight: 500;
         }
@@ -477,7 +477,7 @@
 
         /* Action button grouping styling */
         .btn-sm + .btn-sm { margin-left: 6px; }
-        td > .btn-sm { 
+        td > .btn-sm {
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -490,10 +490,10 @@
         }
 
         /* ── Badges / Status ── */
-        .badge { 
-            font-weight: 600; 
-            font-size: .72rem; 
-            padding: 5px 10px; 
+        .badge {
+            font-weight: 600;
+            font-size: .72rem;
+            padding: 5px 10px;
             border-radius: 6px;
             display: inline-block;
             transition: all .15s ease;
@@ -553,7 +553,7 @@
             color: var(--text-primary);
             transition: border-color .15s, box-shadow .15s, background .15s;
         }
-        body.dark-mode .form-control, 
+        body.dark-mode .form-control,
         body.dark-mode .form-select {
             background: #192238;
             border-color: #2a3f5a;
@@ -569,9 +569,9 @@
             background: #0d1520;
             border-color: #60a5fa;
         }
-        .form-label { 
-            font-weight: 500; 
-            font-size: .84rem; 
+        .form-label {
+            font-weight: 500;
+            font-size: .84rem;
             color: var(--text-secondary);
             margin-bottom: 6px;
         }

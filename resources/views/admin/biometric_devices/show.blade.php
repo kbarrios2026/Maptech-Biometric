@@ -19,11 +19,11 @@
                 <div class="col-auto text-end">
                     <div class="mb-2">
                         <span class="badge bg-light text-dark me-2">
-                            <i class="fas fa-{{ $biometricDevice->sync_mode === 'push' ? 'arrow-down' : 'arrow-up' }}"></i> 
+                            <i class="fas fa-{{ $biometricDevice->sync_mode === 'push' ? 'arrow-down' : 'arrow-up' }}"></i>
                             {{ ucfirst($biometricDevice->sync_mode) }} Mode
                         </span>
                         <span class="badge bg-{{ $biometricDevice->is_active ? 'success' : 'danger' }}">
-                            <i class="fas fa-{{ $biometricDevice->is_active ? 'check-circle' : 'times-circle' }}"></i> 
+                            <i class="fas fa-{{ $biometricDevice->is_active ? 'check-circle' : 'times-circle' }}"></i>
                             {{ $biometricDevice->is_active ? 'Active' : 'Inactive' }}
                         </span>
                     </div>
@@ -62,7 +62,7 @@
                             <code class="bg-light p-2 rounded d-block">{{ $biometricDevice->port }}</code>
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-6">
                             <small class="text-muted d-block fw-bold mb-1">IP Address</small>
@@ -484,14 +484,14 @@
     function refreshAttendance() {
         const tbody = document.getElementById('attendanceBody');
         const btn = document.querySelector('button[onclick*="refreshAttendance"]');
-        
+
         // Show visual feedback
         if (btn) {
             const originalHTML = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
         }
-        
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
