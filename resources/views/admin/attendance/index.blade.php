@@ -118,8 +118,12 @@
                                         <small class="text-muted">{{ $attendance->employee?->employee_id ?? '-' }}</small>
                                     </td>
                                     <td>{{ $attendance->employee?->department?->name ?? '-' }}</td>
-                                    <td>{{ $attendance->check_in_time ?? '-' }}</td>
-                                    <td>{{ $attendance->check_out_time ?? '-' }}</td>
+                                    <td>
+                                        {{ $attendance->check_in_time ? \Illuminate\Support\Carbon::parse($attendance->check_in_time)->format('h:i:s A') : '-' }}
+                                    </td>
+                                    <td>
+                                        {{ $attendance->check_out_time ? \Illuminate\Support\Carbon::parse($attendance->check_out_time)->format('h:i:s A') : '-' }}
+                                    </td>
                                     <td>
                                         <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : 'bg-secondary') }}">
                                             {{ $attendance->status }}

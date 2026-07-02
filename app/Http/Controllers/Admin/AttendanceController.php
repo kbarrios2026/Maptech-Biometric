@@ -16,7 +16,7 @@ class AttendanceController extends Controller
 
         $attendances = Attendance::with(['employee.department', 'employee.position', 'employee.status'])
             ->whereDate('attendance_date', $date)
-            ->orderBy('check_in_time')
+            ->orderByDesc('check_in_time')
             ->get();
 
         $employees = Employee::orderBy('first_name', 'asc')->get();
@@ -40,7 +40,10 @@ class AttendanceController extends Controller
             $query->where('employee_id', $employeeId);
         }
 
-        $attendances = $query->orderBy('attendance_date')->orderBy('check_in_time')->get();
+        $attendances = $query
+            ->orderByDesc('attendance_date')
+            ->orderByDesc('check_in_time')
+            ->get();
 
         $totalCount = $attendances->count();
         $presentCount = $attendances->where('status', 'Present')->count();
@@ -69,7 +72,10 @@ class AttendanceController extends Controller
             $query->where('employee_id', $employeeId);
         }
 
-        $attendances = $query->orderBy('attendance_date')->orderBy('check_in_time')->get();
+        $attendances = $query
+            ->orderByDesc('attendance_date')
+            ->orderByDesc('check_in_time')
+            ->get();
 
         $totalEmployees = $attendances->pluck('employee_id')->unique()->count();
 

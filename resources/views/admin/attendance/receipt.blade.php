@@ -349,8 +349,8 @@
                                 <td>{{ $attendance->employee?->employee_id ?? '-' }}</td>
                             @endif
                             <td>{{ $attendance->attendance_date?->format('M d, Y') ?? $date }}</td>
-                            <td>{{ $attendance->check_in_time ?? '-' }}</td>
-                            <td>{{ $attendance->check_out_time ?? '-' }}</td>
+                            <td>{{ $attendance->check_in_time ? \Illuminate\Support\Carbon::parse($attendance->check_in_time)->format('h:i:s A') : '-' }}</td>
+                            <td>{{ $attendance->check_out_time ? \Illuminate\Support\Carbon::parse($attendance->check_out_time)->format('h:i:s A') : '-' }}</td>
                             <td>{{ $attendance->status }}</td>
                             <td>{{ $attendance->source ?? '-' }}</td>
                         </tr>
