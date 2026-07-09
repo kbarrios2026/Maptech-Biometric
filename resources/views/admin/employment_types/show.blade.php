@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Employment Type Details')
+@section('title', "Employment Type Details")
 
 @section('content')
 <div class="content-wrapper">

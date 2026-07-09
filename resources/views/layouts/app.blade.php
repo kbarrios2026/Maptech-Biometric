@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', 'Employee Management System')</title>
+    <title>@yield('title', "Maptech's Employee System")</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -543,6 +543,32 @@
             color: #cffafe;
         }
 
+        .badge.bg-overtime {
+            background: #8b5cf6 !important;
+            color: #fff !important;
+        }
+        body.dark-mode .badge.bg-overtime {
+            background: #6d28d9 !important;
+            color: #ede9fe !important;
+        }
+
+        /* Dark mode text readability improvements */
+        body.dark-mode .text-muted {
+            color: #9fb0c6 !important;
+        }
+
+        body.dark-mode small.text-muted,
+        body.dark-mode .small.text-muted {
+            color: #a9b8cc !important;
+        }
+
+        body.dark-mode .form-control::placeholder,
+        body.dark-mode .form-select::placeholder,
+        body.dark-mode textarea.form-control::placeholder {
+            color: #8ea2bd;
+            opacity: 1;
+        }
+
         /* ── Forms ── */
         .form-control, .form-select {
             border-radius: 8px;
@@ -625,9 +651,31 @@
             color: #fff;
         }
         body.dark-mode .pagination .page-item.disabled .page-link {
-            color: #64748b;
-            background: #0f172a;
-            border-color: #1e293b;
+            color: #9fb3cc;
+            background: #14213a;
+            border-color: #30435f;
+            opacity: 1;
+        }
+
+        .pagination .pagination-arrow .page-link {
+            font-weight: 700;
+            font-size: .92rem;
+            min-width: 34px;
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        body.dark-mode .pagination .pagination-arrow .page-link {
+            color: #d6e3f3;
+        }
+
+        body.dark-mode .pagination-summary {
+            color: #c6d4e8 !important;
+            font-weight: 500;
+        }
+
+        body.dark-mode .pagination-summary .fw-semibold {
+            color: #e2ecfa;
         }
 
         /* ── Mobile sidebar overlay ── */
@@ -659,7 +707,10 @@
     @yield('styles')
 </head>
 <body>
+    @php($hideNavbar = trim($__env->yieldContent('hide_navbar')) === '1')
+
     <!-- Navbar -->
+    @if(! $hideNavbar)
     <nav class="app-navbar">
         <div class="d-flex align-items-center gap-2">
             <button id="sidebarToggle" class="btn-toggle-sidebar" aria-label="Toggle sidebar">
@@ -667,7 +718,7 @@
             </button>
             <a href="{{ auth()->check() ? route('admin.dashboard') : '/' }}" class="brand">
                 <div class="brand-icon"><i class="fas fa-fingerprint"></i></div>
-                <span>Employee Management System</span>
+                <span>Maptech's Employee System</span>
             </a>
         </div>
         <div class="nav-right">
@@ -693,6 +744,7 @@
             @endauth
         </div>
     </nav>
+    @endif
 
     <div class="app-shell">
         {{-- Sidebar --}}

@@ -11,7 +11,7 @@ class EmployeeStatusController extends Controller
 {
     public function index()
     {
-        $items = EmployeeStatus::latest()->paginate(20);
+        $items = EmployeeStatus::latest()->paginate(10);
         return view('admin.employee_statuses.index', compact('items'));
     }
 

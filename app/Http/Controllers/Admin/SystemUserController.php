@@ -18,7 +18,7 @@ class SystemUserController extends Controller
     public function index()
     {
         $users = User::with('role')
-            ->paginate(15);
+            ->paginate(10);
 
         return view('admin.system-users.index', compact('users'));
     }

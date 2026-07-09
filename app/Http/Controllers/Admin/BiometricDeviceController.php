@@ -15,7 +15,7 @@ class BiometricDeviceController extends Controller
     {
         $devices = BiometricDevice::query()
             ->orderByDesc('created_at')
-            ->paginate(15);
+            ->paginate(10);
 
         return view('admin.biometric_devices.index', compact('devices'));
     }
@@ -177,13 +177,14 @@ class BiometricDeviceController extends Controller
 
         return response()->json([
             'url' => $url,
+            'adms_url' => $url,
+            'legacy_webhook_url' => route('zkteco.webhook', $biometricDevice->device_token),
             'device_token' => $biometricDevice->device_token,
             'method' => 'POST',
             'connection_guide' => $connectionGuide,
             'example_payload' => [
-                'biometric_id' => '12345',
-                'timestamp' => now()->format('Y-m-d H:i:s'),
-                'status' => 0,
+                'line' => '24\t'.now()->format('Y-m-d H:i:s').'\t0\t1\t0\t0\t0\t0\t0\t0',
+                'note' => 'ADMS format is text/plain and tab-separated, not JSON.',
             ],
         ]);
     }
@@ -224,7 +225,8 @@ class BiometricDeviceController extends Controller
      */
     private function buildWebhookUrl(BiometricDevice $biometricDevice): string
     {
-        return route('zkteco.webhook', $biometricDevice->device_token, false);
+        // This project's ZKTeco devices use ADMS /iclock/cdata as the primary push endpoint.
+        return url('/iclock/cdata');
     }
 
     /**
@@ -234,21 +236,26 @@ class BiometricDeviceController extends Controller
     {
         $parsedUrl = parse_url($webhookUrl);
         $shortToken = $this->buildShortToken($biometricDevice);
-        $shortUrl = route('zkteco.webhook', $shortToken, false);
+        $shortUrl = route('zkteco.webhook', $shortToken);
+        $legacyFullUrl = route('zkteco.webhook', $biometricDevice->device_token);
 
         return [
             'server_ip' => $parsedUrl['host'] ?? parse_url((string) config('app.url', ''), PHP_URL_HOST),
             'server_port' => $parsedUrl['port'] ?? (parse_url((string) config('app.url', ''), PHP_URL_PORT) ?? 80),
             'device_ip' => $biometricDevice->ip_address,
             'device_port' => $biometricDevice->port ?? 4370,
+            'adms_url' => $webhookUrl,
             'short_token' => $shortToken,
-            'recommended_url' => $shortUrl,
+            'recommended_url' => $webhookUrl,
             'full_url' => $webhookUrl,
+            'legacy_short_url' => $shortUrl,
+            'legacy_full_url' => $legacyFullUrl,
             'recommended_notes' => [
                 'Use the server IP or hostname shown here, not 127.0.0.1 or localhost.',
                 'Keep the device on the same LAN or open the webhook URL through a public domain/VPN if it is remote.',
-                'For push mode, configure the device to POST attendance events to the short webhook URL.',
-                'If short token ever conflicts in the future, use the full webhook URL.',
+                'For ADMS push mode, configure the device server path to /iclock/cdata.',
+                'Use SN serial number on the device; this server resolves the device by serial number.',
+                'Webhook URLs are legacy fallback only for JSON-based integrations.',
             ],
         ];
     }

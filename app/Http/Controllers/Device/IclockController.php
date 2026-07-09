@@ -204,6 +204,15 @@ class IclockController extends Controller
             }
 
             $attendance->source = $device->name;
+            if (! in_array($attendance->status, ['Absent', 'Leave'], true) && Attendance::isOvertimeCheckout($attendance->check_out_time)) {
+                $attendance->status = 'Overtime';
+                if (empty($attendance->overtime_approval_status)) {
+                    $attendance->overtime_approval_status = 'Pending';
+                }
+                if (empty($attendance->overtime_reason)) {
+                    $attendance->overtime_reason = 'Auto-detected from checkout time.';
+                }
+            }
             $attendance->save();
             $processed++;
         }

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'View Biometric Device')
+@section('title', "View Biometric Device")
 
 @section('content')
 <div class="content-wrapper biometric-device-show">
@@ -100,7 +100,7 @@
                             <div class="alert alert-info mb-0">
                                 <h6 class="alert-heading mb-2"><i class="fas fa-broadcast-tower"></i> Push Mode Active</h6>
                                 <p class="small mb-2">Your device is configured to <strong>send data to your server</strong>. No connection test needed.</p>
-                                <p class="small mb-0"><strong>Next Step:</strong> Follow the setup instructions below to configure the webhook URL in your device's web interface.</p>
+                                <p class="small mb-0"><strong>Next Step:</strong> Follow the setup instructions below to configure the ADMS push URL in your device's web interface.</p>
                             </div>
                         </div>
                         @else
@@ -197,15 +197,16 @@
                     <div class="d-flex gap-3">
                         <div class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center shrink-0" style="width: 48px; height: 48px; font-size: 1.3rem;">4</div>
                         <div class="grow">
-                            <h6 class="fw-bold mb-2">Set Webhook URL</h6>
+                            <h6 class="fw-bold mb-2">Set ADMS Push URL</h6>
                             <p class="text-muted small mb-2">Navigate to: <strong>Settings → Server → Push Webhook</strong></p>
-                            <p class="text-muted small mb-2">Paste this webhook URL:</p>
+                            <p class="text-muted small mb-2">Paste this ADMS endpoint URL:</p>
                             <div class="input-group input-group-sm">
                                 <input type="text" class="form-control font-monospace" id="webhookUrlSetup" value="{{ $webhookUrl }}" readonly style="background-color: #f8f9fa; font-size: 0.75rem;">
                                 <button class="btn btn-outline-primary btn-sm" type="button" onclick="copyWebhookUrl()" title="Copy to clipboard">
                                     <i class="fas fa-copy"></i> Copy
                                 </button>
                             </div>
+                            <p class="text-muted small mt-2 mb-0">Legacy webhook (optional): <code>{{ $connectionGuide['legacy_full_url'] ?? '-' }}</code></p>
                         </div>
                     </div>
                 </div>
@@ -517,7 +518,7 @@
                     <td>${a.date}</td>
                     <td>${a.check_in || '-'}</td>
                     <td>${a.check_out || '-'}</td>
-                    <td><span class="badge bg-${a.status === 'Present' ? 'success' : a.status === 'Late' ? 'warning' : a.status === 'Absent' ? 'danger' : 'secondary'}">${a.status}</span></td>
+                    <td><span class="badge bg-${a.status === 'Present' ? 'success' : a.status === 'Late' ? 'warning' : a.status === 'Overtime' ? 'overtime' : a.status === 'Absent' ? 'danger' : 'secondary'}">${a.status}</span></td>
                     <td>${a.source || '-'}</td>
                     <td>${a.created_at}</td>
                 </tr>

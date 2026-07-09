@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard - Employee Management System')
+@section('title', "Dashboard - Maptech's Employee System")
 
 @section('content')
 <div class="page-header">
@@ -77,19 +77,21 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($recentActivityLogs as $log)
-                            <tr>
-                                <td><strong>{{ $log->user?->name ?? 'Unknown' }}</strong></td>
-                                <td><span class="badge bg-secondary">{{ $log->action }}</span></td>
-                                <td>{{ $log->description }}</td>
-                                <td><small class="text-muted">{{ $log->ip_address }}</small></td>
-                                <td><small class="text-muted">{{ $log->created_at->diffForHumans() }}</small></td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="5" class="text-center text-muted py-4">No activity logs yet.</td>
-                            </tr>
-                            @endforelse
+                            @if($recentActivityLogs->isNotEmpty())
+                                @foreach($recentActivityLogs as $log)
+                                <tr>
+                                    <td><strong>{{ $log->user?->name ?? 'Unknown' }}</strong></td>
+                                    <td><span class="badge bg-secondary">{{ $log->action }}</span></td>
+                                    <td>{{ $log->description }}</td>
+                                    <td><small class="text-muted">{{ $log->ip_address }}</small></td>
+                                    <td><small class="text-muted">{{ $log->created_at->diffForHumans() }}</small></td>
+                                </tr>
+                                @endforeach
+                            @else
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">No activity logs yet.</td>
+                                </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>

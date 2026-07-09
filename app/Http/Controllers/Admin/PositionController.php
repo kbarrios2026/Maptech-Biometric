@@ -16,7 +16,7 @@ class PositionController extends Controller
      */
     public function index()
     {
-        $positions = Position::with('department')->latest()->paginate(15);
+        $positions = Position::with('department')->latest()->paginate(10);
         return view('admin.positions.index', compact('positions'));
     }
 

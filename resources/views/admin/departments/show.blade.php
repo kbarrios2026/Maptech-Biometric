@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Department Details - Employee Management System')
+@section('title', "Department Details - Maptech's Employee System")
 
 @section('content')
 <div class="content-wrapper">

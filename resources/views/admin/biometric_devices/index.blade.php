@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Biometric Devices')
+@section('title', "Biometric Devices")
 
 @section('content')
 <div class="content-wrapper">

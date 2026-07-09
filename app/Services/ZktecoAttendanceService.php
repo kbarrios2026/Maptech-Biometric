@@ -55,6 +55,15 @@ class ZktecoAttendanceService
             }
 
             $attendance->source = $device->name;
+            if (! in_array($attendance->status, ['Absent', 'Leave'], true) && Attendance::isOvertimeCheckout($attendance->check_out_time)) {
+                $attendance->status = 'Overtime';
+                if (empty($attendance->overtime_approval_status)) {
+                    $attendance->overtime_approval_status = 'Pending';
+                }
+                if (empty($attendance->overtime_reason)) {
+                    $attendance->overtime_reason = 'Auto-detected from checkout time.';
+                }
+            }
             $attendance->save();
             $processed++;
         }
@@ -86,9 +95,9 @@ class ZktecoAttendanceService
             return null;
         }
 
-        return Employee::where('biometric_id', (string) $identifier)->first()
-            ?? Employee::where('employee_id', (string) $identifier)->first()
-            ?? optional(EmployeeDevice::where('device_identifier', (string) $identifier)->with('employee')->first())->employee;
+        return Employee::query()->where('biometric_id', (string) $identifier)->first()
+            ?? Employee::query()->where('employee_id', (string) $identifier)->first()
+            ?? optional(EmployeeDevice::query()->where('device_identifier', (string) $identifier)->with('employee')->first())->employee;
     }
 
     protected function resolveTimestamp(array $log): ?Carbon
@@ -126,6 +135,7 @@ class ZktecoAttendanceService
             return 'Half Day';
         }
 
-        return $time > '08:00:00' ? 'Late' : 'Present';
+        // On-time attendance window: 12:01 AM to 7:59:59 AM.
+        return ($time >= '00:01:00' && $time <= '07:59:59') ? 'Present' : 'Late';
     }
 }

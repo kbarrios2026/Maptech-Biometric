@@ -384,7 +384,7 @@
             </div>
         </div>
 
-        <div class="footer">Employee Management System - Date & Time Report</div>
+        <div class="footer">Maptech's Employee System - Date & Time Report</div>
     </div>
 
 </body>

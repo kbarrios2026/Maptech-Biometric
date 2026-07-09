@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'HR Admin Attendance - Employee Management System')
+@section('title', "HR Admin Attendance - Maptech's Employee System")
 
 @section('content')
 <div class="content-wrapper attendance-page">
@@ -63,7 +63,7 @@
                     </div>
                     <div>
                         <div class="report-kicker">Date Time Report</div>
-                        <h2 class="report-title mb-1">{{ config('app.name', 'Employee Management System') }}</h2>
+                        <h2 class="report-title mb-1">{{ config('app.name', "Maptech's Employee System") }}</h2>
                         <div class="text-muted">
                             @if($selectedEmployee)
                                 {{ $selectedEmployee->full_name }} ({{ $selectedEmployee->employee_id }})
@@ -99,6 +99,10 @@
                     <div class="report-value">{{ $lateCount }}</div>
                 </div>
                 <div class="report-block">
+                    <div class="report-label">Overtime</div>
+                    <div class="report-value">{{ $overtimeCount }}</div>
+                </div>
+                <div class="report-block">
                     <div class="report-label">Other</div>
                     <div class="report-value">{{ $otherCount }}</div>
                 </div>
@@ -114,26 +118,32 @@
         </div>
     </div>
 
-    <div class="row g-3 mb-4 no-print">
-        <div class="col-12 col-sm-6 col-xl-3">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3 mb-4 no-print">
+        <div class="col">
             <div class="card p-3 h-100 hr-summary-card">
                 <div class="text-muted">Attended Today</div>
                 <h3 class="mb-0">{{ $attendances->count() }}</h3>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col">
             <div class="card p-3 h-100 hr-summary-card">
                 <div class="text-muted">Present</div>
                 <h3 class="mb-0">{{ $presentCount }}</h3>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col">
             <div class="card p-3 h-100 hr-summary-card">
                 <div class="text-muted">Late</div>
                 <h3 class="mb-0">{{ $lateCount }}</h3>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-xl-3">
+        <div class="col">
+            <div class="card p-3 h-100 hr-summary-card">
+                <div class="text-muted">Overtime</div>
+                <h3 class="mb-0">{{ $overtimeCount }}</h3>
+            </div>
+        </div>
+        <div class="col">
             <div class="card p-3 h-100 hr-summary-card">
                 <div class="text-muted">Other</div>
                 <h3 class="mb-0">{{ $otherCount }}</h3>
@@ -152,12 +162,13 @@
                         <th>Check In</th>
                         <th>Check Out</th>
                         <th>Status</th>
+                        <th class="ot-review-col">OT Review</th>
                         <th>Source</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($attendances as $attendance)
-                        <tr>
+                        <tr class="{{ $attendance->status === 'Overtime' ? 'ot-row' : '' }}">
                             <td>
                                 <strong>{{ $attendance->employee?->full_name ?? 'Unknown' }}</strong><br>
                                 <small class="text-muted">{{ $attendance->employee?->employee_id ?? '-' }}</small>
@@ -171,15 +182,58 @@
                                 {{ $attendance->check_out_time ? \Illuminate\Support\Carbon::createFromFormat('H:i:s', $attendance->check_out_time)->format('h:i:s A') : '-' }}
                             </td>
                             <td>
-                                <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : 'bg-secondary') }}">
+                                <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : ($attendance->status === 'Overtime' ? 'bg-overtime' : 'bg-secondary')) }}">
                                     {{ $attendance->status }}
                                 </span>
+                            </td>
+                            <td class="ot-review-col">
+                                @if($attendance->status === 'Overtime')
+                                    @php
+                                        $reviewStatus = $attendance->overtime_approval_status ?? 'Pending';
+                                        $hasRejectedReason = $reviewStatus === 'Rejected' && filled($attendance->overtime_approval_reason);
+                                        $reasonId = 'ot-reason-' . $attendance->id;
+                                    @endphp
+
+                                    <div class="small mb-2 ot-review-cell">
+                                        @if($hasRejectedReason)
+                                            <button
+                                                type="button"
+                                                class="badge bg-danger ot-reason-toggle"
+                                                data-reason-target="{{ $reasonId }}"
+                                                aria-expanded="false"
+                                                aria-controls="{{ $reasonId }}">
+                                                {{ $reviewStatus }}
+                                            </button>
+                                        @else
+                                            <span class="badge {{ $reviewStatus === 'Approved' ? 'bg-success' : ($reviewStatus === 'Rejected' ? 'bg-danger' : 'bg-warning text-dark') }}">
+                                                {{ $reviewStatus }}
+                                            </span>
+                                        @endif
+
+                                        @if($hasRejectedReason)
+                                            <div id="{{ $reasonId }}" class="ot-reason mt-1 d-none">{{ $attendance->overtime_approval_reason }}</div>
+                                        @endif
+                                    </div>
+
+                                    @if($reviewStatus === 'Pending')
+                                        <form method="POST" action="{{ route('admin.attendance.overtime-review', $attendance) }}" class="ot-review-form">
+                                            @csrf
+                                            <input type="text" name="reason" class="form-control form-control-sm" placeholder="HR reason" required>
+                                            <div class="btn-group btn-group-sm w-100" role="group">
+                                                <button type="submit" name="decision" value="approved" class="btn btn-success">Approve</button>
+                                                <button type="submit" name="decision" value="rejected" class="btn btn-danger">Reject</button>
+                                            </div>
+                                        </form>
+                                    @endif
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
                             </td>
                             <td>{{ $attendance->source ?? '-' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No attendance records found for the selected filters.</td>
+                            <td colspan="8" class="text-center text-muted py-4">No attendance records found for the selected filters.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -360,6 +414,76 @@
     .hr-attendance-table th {
         vertical-align: middle;
         font-size: .92rem;
+        transition: background-color .18s ease;
+    }
+
+    .hr-attendance-table tr.attendance-row-editing > td {
+        background: rgba(245, 158, 11, 0.12);
+    }
+
+    .hr-attendance-table tr.attendance-row-saving > td {
+        background: rgba(59, 130, 246, 0.12);
+    }
+
+    .ot-review-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 0 !important;
+    }
+
+    .ot-review-col {
+        text-align: center;
+        min-width: 200px;
+        padding-left: .75rem !important;
+        padding-right: .75rem !important;
+    }
+
+    .ot-review-col.is-editing {
+        box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.45);
+    }
+
+    .ot-review-col.is-saving {
+        box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.5);
+    }
+
+    .ot-reason-toggle {
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.2;
+        padding: .42em .76em;
+        margin-inline: auto;
+        text-align: center;
+    }
+
+    .ot-reason-toggle:focus-visible {
+        outline: 2px solid rgba(59, 130, 246, 0.55);
+        outline-offset: 2px;
+    }
+
+    .ot-review-cell .ot-reason {
+        color: #64748b;
+        font-size: .8rem;
+        line-height: 1.35;
+        max-width: 240px;
+        word-break: break-word;
+        padding: 8px 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #f8fafc;
+        text-align: left;
+    }
+
+    .ot-review-form {
+        display: grid;
+        gap: 8px;
+        max-width: 220px;
+        margin-inline: auto;
+        margin-top: .35rem;
     }
 
     body.dark-mode .toolbar-bar {
@@ -393,7 +517,7 @@
     }
 
     body.dark-mode .report-meta {
-        color: #cbd5e1;
+        color: #d7e2f1;
     }
 
     body.dark-mode .report-block {
@@ -402,7 +526,7 @@
     }
 
     body.dark-mode .report-label {
-        color: #94a3b8;
+        color: #b7c6da;
     }
 
     body.dark-mode .report-value {
@@ -411,7 +535,34 @@
 
     body.dark-mode .report-footer {
         border-top-color: #334155;
-        color: #94a3b8 !important;
+        color: #b6c5d9 !important;
+    }
+
+    body.dark-mode .attendance-header .text-muted,
+    body.dark-mode .attendance-header .text-muted.small {
+        color: #b4c3d7 !important;
+    }
+
+    body.dark-mode .ot-review-cell .ot-reason {
+        color: #cbd5e1;
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    body.dark-mode .hr-attendance-table tr.attendance-row-editing > td {
+        background: rgba(245, 158, 11, 0.16);
+    }
+
+    body.dark-mode .hr-attendance-table tr.attendance-row-saving > td {
+        background: rgba(37, 99, 235, 0.22);
+    }
+
+    body.dark-mode .ot-review-col.is-editing {
+        box-shadow: inset 0 0 0 1px rgba(251, 191, 36, 0.55);
+    }
+
+    body.dark-mode .ot-review-col.is-saving {
+        box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.6);
     }
 
     @media (max-width: 1199.98px) {
@@ -431,4 +582,87 @@
         }
     }
 </style>
+@endsection
+
+@section('scripts')
+<script>
+    function syncReviewVisualState(form, options = {}) {
+        const row = form.closest('tr');
+        const reviewCell = form.closest('.ot-review-col');
+        const reasonInput = form.querySelector('input[name="reason"]');
+
+        if (!row || !reviewCell || !reasonInput) {
+            return;
+        }
+
+        const focused = form.contains(document.activeElement);
+        const dirty = reasonInput.value.trim().length > 0;
+        const isSaving = options.isSaving === true;
+        const isEditing = !isSaving && (focused || dirty);
+
+        row.classList.toggle('attendance-row-editing', isEditing);
+        reviewCell.classList.toggle('is-editing', isEditing);
+        row.classList.toggle('attendance-row-saving', isSaving);
+        reviewCell.classList.toggle('is-saving', isSaving);
+    }
+
+    document.addEventListener('focusin', function (event) {
+        const form = event.target.closest('.ot-review-form');
+        if (!form) {
+            return;
+        }
+
+        syncReviewVisualState(form);
+    });
+
+    document.addEventListener('focusout', function (event) {
+        const form = event.target.closest('.ot-review-form');
+        if (!form) {
+            return;
+        }
+
+        setTimeout(function () {
+            syncReviewVisualState(form);
+        }, 0);
+    });
+
+    document.addEventListener('input', function (event) {
+        const form = event.target.closest('.ot-review-form');
+        if (!form) {
+            return;
+        }
+
+        syncReviewVisualState(form);
+    });
+
+    document.addEventListener('submit', function (event) {
+        const form = event.target.closest('.ot-review-form');
+        if (!form) {
+            return;
+        }
+
+        syncReviewVisualState(form, { isSaving: true });
+    });
+
+    document.addEventListener('click', function (event) {
+        const toggle = event.target.closest('.ot-reason-toggle');
+        if (!toggle) {
+            return;
+        }
+
+        const targetId = toggle.getAttribute('data-reason-target');
+        if (!targetId) {
+            return;
+        }
+
+        const reason = document.getElementById(targetId);
+        if (!reason) {
+            return;
+        }
+
+        reason.classList.toggle('d-none');
+        const isExpanded = !reason.classList.contains('d-none');
+        toggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+    });
+</script>
 @endsection

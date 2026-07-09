@@ -11,7 +11,7 @@ class EmploymentTypeController extends Controller
 {
     public function index()
     {
-        $types = EmploymentType::latest()->paginate(20);
+        $types = EmploymentType::latest()->paginate(10);
         return view('admin.employment_types.index', compact('types'));
     }
 

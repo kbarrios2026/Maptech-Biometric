@@ -12,7 +12,7 @@ class EmployeeDeviceController extends Controller
 {
     public function index()
     {
-        $devices = EmployeeDevice::with('employee')->latest()->paginate(20);
+        $devices = EmployeeDevice::with('employee')->latest()->paginate(10);
         return view('admin.employee_devices.index', compact('devices'));
     }
 

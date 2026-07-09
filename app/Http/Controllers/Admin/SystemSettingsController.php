@@ -11,7 +11,7 @@ class SystemSettingsController extends Controller
 {
     public function index()
     {
-        $settings = Setting::latest()->paginate(30);
+        $settings = Setting::latest()->paginate(10);
         return view('admin.settings.index', compact('settings'));
     }
 

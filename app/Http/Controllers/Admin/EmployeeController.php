@@ -22,7 +22,7 @@ class EmployeeController extends Controller
     {
         $employees = Employee::with(['user', 'department', 'position'])
             ->latest()
-            ->paginate(15);
+            ->paginate(10);
 
         return view('admin.employees.index', compact('employees'));
     }

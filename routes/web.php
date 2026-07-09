@@ -62,6 +62,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::resource('employees', EmployeeController::class);
         Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+        Route::post('attendance/{attendance}/overtime-review', [AttendanceController::class, 'reviewOvertime'])->name('attendance.overtime-review');
         Route::get('attendance/hr-admin', [AttendanceController::class, 'hrAdmin'])->name('attendance.hr-admin');
         Route::get('attendance/receipt', [AttendanceController::class, 'receipt'])->name('attendance.receipt');
     });

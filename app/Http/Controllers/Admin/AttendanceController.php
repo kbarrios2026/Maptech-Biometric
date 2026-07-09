@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AttendanceController extends Controller
 {
@@ -40,15 +41,17 @@ class AttendanceController extends Controller
             $query->where('employee_id', $employeeId);
         }
 
+        $totalCount = (clone $query)->count();
+        $presentCount = (clone $query)->where('status', 'Present')->count();
+        $lateCount = (clone $query)->where('status', 'Late')->count();
+        $overtimeCount = (clone $query)->where('status', 'Overtime')->count();
+        $otherCount = $totalCount - $presentCount - $lateCount - $overtimeCount;
+
         $attendances = $query
             ->orderByDesc('attendance_date')
             ->orderByDesc('check_in_time')
-            ->get();
-
-        $totalCount = $attendances->count();
-        $presentCount = $attendances->where('status', 'Present')->count();
-        $lateCount = $attendances->where('status', 'Late')->count();
-        $otherCount = $totalCount - $presentCount - $lateCount;
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin.attendance.hr_admin', compact(
             'attendances',
@@ -60,6 +63,7 @@ class AttendanceController extends Controller
             'totalCount',
             'presentCount',
             'lateCount',
+            'overtimeCount',
             'otherCount'
         ));
     }
@@ -99,29 +103,46 @@ class AttendanceController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        /** @var array{employee_id:int|string, attendance_date:string, check_in_time?:string|null, check_out_time?:string|null, status:string, source?:string|null, notes?:string|null, overtime_reason?:string|null} $data */
+        $data = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'attendance_date' => 'required|date',
             'check_in_time' => 'nullable',
             'check_out_time' => 'nullable',
-            'status' => 'required|in:Present,Late,Absent,Half Day,Leave',
+            'status' => 'required|in:Present,Late,Absent,Half Day,Leave,Overtime',
             'source' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
+            'overtime_reason' => 'nullable|string|required_if:status,Overtime',
         ]);
 
-        Attendance::updateOrCreate(
+        $overtime = ($data['status'] ?? null) === 'Overtime';
+
+        $attendance = Attendance::updateOrCreate(
             [
-                'employee_id' => $request->employee_id,
-                'attendance_date' => $request->attendance_date,
+                'employee_id' => $data['employee_id'],
+                'attendance_date' => $data['attendance_date'],
             ],
             [
-                'check_in_time' => $request->check_in_time,
-                'check_out_time' => $request->check_out_time,
-                'status' => $request->status,
-                'source' => $request->source,
-                'notes' => $request->notes,
+                'check_in_time' => $data['check_in_time'] ?? null,
+                'check_out_time' => $data['check_out_time'] ?? null,
+                'status' => $data['status'],
+                'source' => $data['source'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'overtime_reason' => $overtime ? ($data['overtime_reason'] ?? null) : null,
+                'overtime_approval_status' => $overtime ? 'Pending' : null,
+                'overtime_approval_reason' => null,
+                'overtime_approved_by' => null,
+                'overtime_approved_at' => null,
             ]
         );
+
+        if (! $overtime && ! in_array($attendance->status, ['Absent', 'Leave'], true) && Attendance::isOvertimeCheckout($attendance->check_out_time)) {
+            $attendance->forceFill([
+                'status' => 'Overtime',
+                'overtime_approval_status' => $attendance->overtime_approval_status ?? 'Pending',
+                'overtime_reason' => $attendance->overtime_reason ?: 'Auto-detected from checkout time.',
+            ])->save();
+        }
 
         if (class_exists('\App\Models\ActivityLog')) {
             \App\Models\ActivityLog::create([
@@ -134,5 +155,36 @@ class AttendanceController extends Controller
         }
 
         return back()->with('success', 'Attendance saved.');
+    }
+
+    public function reviewOvertime(Request $request, Attendance $attendance)
+    {
+        if ($attendance->status !== 'Overtime') {
+            return back()->with('error', 'Only overtime records can be reviewed.');
+        }
+
+        $data = $request->validate([
+            'decision' => 'required|in:approved,rejected',
+            'reason' => 'required|string|max:1000',
+        ]);
+
+        $attendance->forceFill([
+            'overtime_approval_status' => $data['decision'] === 'approved' ? 'Approved' : 'Rejected',
+            'overtime_approval_reason' => $data['reason'],
+            'overtime_approved_by' => Auth::id(),
+            'overtime_approved_at' => now(),
+        ])->save();
+
+        if (class_exists('\App\Models\ActivityLog')) {
+            \App\Models\ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'review_overtime',
+                'model' => 'Attendance',
+                'model_id' => $attendance->id,
+                'description' => 'Overtime ' . $data['decision'] . ' with reason: ' . $data['reason'],
+            ]);
+        }
+
+        return back()->with('success', 'Overtime review saved.');
     }
 }
