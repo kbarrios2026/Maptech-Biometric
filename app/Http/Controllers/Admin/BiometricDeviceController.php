@@ -183,7 +183,7 @@ class BiometricDeviceController extends Controller
             'method' => 'POST',
             'connection_guide' => $connectionGuide,
             'example_payload' => [
-                'line' => '24\t'.now()->format('Y-m-d H:i:s').'\t0\t1\t0\t0\t0\t0\t0\t0',
+                'line' => '24\t' . now()->format('Y-m-d H:i:s') . '\t0\t1\t0\t0\t0\t0\t0\t0',
                 'note' => 'ADMS format is text/plain and tab-separated, not JSON.',
             ],
         ]);
