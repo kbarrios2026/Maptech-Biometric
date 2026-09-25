@@ -65,7 +65,11 @@ class ZktecoAttendanceService
             }
 
             $attendance->source = $device->name;
-            if (! in_array($attendance->status, ['Absent', 'Leave'], true) && Attendance::isOvertimeCheckout($attendance->check_out_time)) {
+            if (
+                ! in_array($attendance->status, ['Absent', 'Leave'], true)
+                && $attendance->overtime_approval_status !== 'Rejected'
+                && Attendance::isOvertimeCheckout($attendance->check_out_time)
+            ) {
                 $attendance->status = 'Overtime';
                 if (empty($attendance->overtime_approval_status)) {
                     $attendance->overtime_approval_status = 'Pending';

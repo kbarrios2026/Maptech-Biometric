@@ -238,7 +238,11 @@ class IclockController extends Controller
             if (! in_array($attendance->status, ['Absent', 'Leave', 'Overtime'], true) && $attendance->check_in_time) {
                 $attendance->status = Attendance::statusForCheckIn($attendance->check_in_time);
             }
-            if (! in_array($attendance->status, ['Absent', 'Leave'], true) && Attendance::isOvertimeCheckout($attendance->check_out_time)) {
+            if (
+                ! in_array($attendance->status, ['Absent', 'Leave'], true)
+                && $attendance->overtime_approval_status !== 'Rejected'
+                && Attendance::isOvertimeCheckout($attendance->check_out_time)
+            ) {
                 $attendance->status = 'Overtime';
                 if (empty($attendance->overtime_approval_status)) {
                     $attendance->overtime_approval_status = 'Pending';

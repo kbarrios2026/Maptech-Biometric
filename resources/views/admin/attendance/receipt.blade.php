@@ -50,18 +50,9 @@
         }
 
         .logo {
-            width: 86px;
-            height: 86px;
-            border: 2px solid #cbd5e1;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: .85rem;
-            font-weight: 700;
-            letter-spacing: .12em;
-            color: #64748b;
-            background: linear-gradient(180deg, #f8fafc, #eef2f7);
+            display: block;
+            width: 300px;
+            height: auto;
             flex: 0 0 auto;
         }
 
@@ -200,6 +191,7 @@
 
             body {
                 background: #fff;
+                color: #000;
             }
 
             .page {
@@ -209,6 +201,43 @@
                 box-shadow: none;
                 border-radius: 0;
                 max-width: none;
+            }
+
+            .meta,
+            .label,
+            .sign-label,
+            .value,
+            .section-header,
+            .report-table,
+            .report-table td,
+            .report-table th {
+                color: #000 !important;
+            }
+
+            .section-bar {
+                height: 0;
+                border-top: 2px solid #000;
+                background: none;
+            }
+
+            .grid,
+            .cell,
+            .report-table,
+            .report-table td,
+            .report-table th {
+                border-color: #000 !important;
+            }
+
+            .section-header,
+            .report-table thead th {
+                background: #fff !important;
+                border-color: #000 !important;
+                color: #000 !important;
+            }
+
+            .footer {
+                border-top-color: #000;
+                color: #000;
             }
 
             .no-print {
@@ -232,12 +261,6 @@
                 white-space: nowrap;
             }
 
-            .section-bar,
-            .section-header,
-            .report-table thead th {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
         }
     </style>
 </head>
@@ -250,17 +273,7 @@
     <div class="page">
         <div class="header">
             <div class="header-left">
-                <div class="logo">LOGO</div>
-                <div>
-                    <div class="title">Maptech Date Time Report</div>
-                    <div class="subtitle">
-                        @if(($scope ?? 'single') === 'all')
-                            All Employees
-                        @else
-                            {{ $employee?->full_name ?? 'Unknown' }} ({{ $employee?->employee_id ?? '-' }})
-                        @endif
-                    </div>
-                </div>
+                <img class="logo" src="{{ asset('images/maptech-logo.png') }}" alt="Maptech Information Solutions Inc.">
             </div>
             <div class="meta">
                 <div><strong>Printed:</strong> {{ now()->format('M d, Y h:i A') }}</div>
@@ -402,7 +415,6 @@
             </div>
         </div>
 
-        <div class="footer">Maptech's Employee System - Date & Time Report</div>
     </div>
 
 </body>

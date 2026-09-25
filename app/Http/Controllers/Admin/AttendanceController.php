@@ -239,7 +239,12 @@ class AttendanceController extends Controller
             ]
         );
 
-        if (! $overtime && ! in_array($attendance->status, ['Absent', 'Leave'], true) && Attendance::isOvertimeCheckout($attendance->check_out_time)) {
+        if (
+            ! $overtime
+            && ! in_array($attendance->status, ['Absent', 'Leave'], true)
+            && $attendance->overtime_approval_status !== 'Rejected'
+            && Attendance::isOvertimeCheckout($attendance->check_out_time)
+        ) {
             $attendance->forceFill([
                 'status' => 'Overtime',
                 'overtime_approval_status' => $attendance->overtime_approval_status ?? 'Pending',
@@ -334,8 +339,12 @@ class AttendanceController extends Controller
             'reason' => 'required|string|max:1000',
         ]);
 
+        $approvalStatus = $data['decision'] === 'approved' ? 'Approved' : 'Rejected';
         $attendance->forceFill([
-            'overtime_approval_status' => $data['decision'] === 'approved' ? 'Approved' : 'Rejected',
+            'status' => $approvalStatus === 'Approved'
+                ? 'Overtime'
+                : Attendance::statusForCheckIn($attendance->check_in_time),
+            'overtime_approval_status' => $approvalStatus,
             'overtime_approval_reason' => $data['reason'],
             'overtime_approved_by' => Auth::id(),
             'overtime_approved_at' => now(),
