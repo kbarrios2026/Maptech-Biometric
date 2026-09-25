@@ -88,7 +88,7 @@
                 </div>
                 <div class="report-block">
                     <div class="report-label">Total Records</div>
-                    <div class="report-value">{{ $totalCount }}</div>
+                        <div class="report-value">{{ $attendances->total() }}</div>
                 </div>
                 <div class="report-block">
                     <div class="report-label">Present</div>
@@ -121,8 +121,8 @@
     <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3 mb-4 no-print">
         <div class="col">
             <div class="card p-3 h-100 hr-summary-card">
-                <div class="text-muted">Attended Today</div>
-                <h3 class="mb-0">{{ $attendances->count() }}</h3>
+                <div class="text-muted">Attendance Records</div>
+                <h3 class="mb-0">{{ $totalCount }}</h3>
             </div>
         </div>
         <div class="col">

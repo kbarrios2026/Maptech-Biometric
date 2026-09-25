@@ -35,7 +35,8 @@ class AttendanceController extends Controller
         $selectedEmployee = $employeeId ? Employee::findOrFail($employeeId) : null;
 
         $query = Attendance::with(['employee.department', 'employee.position', 'employee.status'])
-            ->whereBetween('attendance_date', [$dateFrom, $dateTo]);
+            ->whereDate('attendance_date', '>=', $dateFrom)
+            ->whereDate('attendance_date', '<=', $dateTo);
 
         if ($employeeId) {
             $query->where('employee_id', $employeeId);
@@ -50,7 +51,7 @@ class AttendanceController extends Controller
         $attendances = $query
             ->orderByDesc('attendance_date')
             ->orderByDesc('check_in_time')
-            ->paginate(10)
+            ->paginate(100)
             ->withQueryString();
 
         return view('admin.attendance.hr_admin', compact(

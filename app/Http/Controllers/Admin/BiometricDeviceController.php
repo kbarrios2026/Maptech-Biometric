@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\BiometricDevice;
+use App\Models\EmployeeDevice;
 use App\Services\ZktecoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -50,8 +51,13 @@ class BiometricDeviceController extends Controller
     {
         $webhookUrl = $this->buildWebhookUrl($biometricDevice);
         $connectionGuide = $this->buildConnectionGuide($biometricDevice, $webhookUrl);
+        $deviceUsers = EmployeeDevice::query()
+            ->where('device_name', $biometricDevice->name)
+            ->with('employee:id,employee_id,first_name,last_name,biometric_id')
+            ->orderBy('device_identifier')
+            ->get();
 
-        return view('admin.biometric_devices.show', compact('biometricDevice', 'webhookUrl', 'connectionGuide'));
+        return view('admin.biometric_devices.show', compact('biometricDevice', 'webhookUrl', 'connectionGuide', 'deviceUsers'));
     }
 
     public function edit(BiometricDevice $biometricDevice)

@@ -256,6 +256,39 @@
     </div>
     @endif
 
+    <!-- Device Users -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-white border-bottom">
+            <h5 class="card-title mb-0"><i class="fas fa-users"></i> Device Users ({{ $deviceUsers->count() }})</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Employee ID</th>
+                        <th>Employee Name</th>
+                        <th>ZKTeco PIN</th>
+                        <th>Device</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($deviceUsers as $deviceUser)
+                    <tr>
+                        <td>{{ $deviceUser->employee?->employee_id ?? '-' }}</td>
+                        <td>{{ $deviceUser->employee?->full_name ?? 'Unassigned' }}</td>
+                        <td><code>{{ $deviceUser->device_identifier }}</code></td>
+                        <td>{{ $deviceUser->device_name }}</td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">No ZKTeco users have been received yet.</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Recent Attendance Feed -->
     <div class="card shadow-sm mt-4">
         <div class="card-header bg-white border-bottom">

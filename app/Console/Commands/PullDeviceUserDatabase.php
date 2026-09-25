@@ -5,196 +5,113 @@ namespace App\Console\Commands;
 use App\Models\BiometricDevice;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\EmployeeDevice;
 use App\Models\EmploymentType;
 use App\Models\Position;
+use App\Models\User;
 use App\Services\ZktecoWebService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class PullDeviceUserDatabase extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'device:pull-database {--device=1 : Device ID} {--force : Force pull even if recently synced}';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Pull entire user database from ZKTeco device and auto-register new users';
+    protected $description = 'Pull the user database from a ZKTeco device';
 
-    /**
-     * Execute the console command.
-     */
     public function handle(): int
     {
-        $deviceId = $this->option('device');
-        /** @var \App\Models\BiometricDevice|null $device */
-        $device = BiometricDevice::find($deviceId);
+        $device = BiometricDevice::find($this->option('device'));
 
         if (! $device) {
-            $this->error("Device #{$deviceId} not found");
+            $this->error('Device not found.');
 
-            return 1;
+            return self::FAILURE;
         }
 
-        $this->info("🔄 Pulling user database from device: {$device->name}");
-        $this->info("   IP: {$device->ip_address}:{$device->port}");
+        if (! $this->option('force') && $device->last_synced_at?->diffInMinutes(now()) < 5) {
+            $this->warn('Device was synced recently. Use --force to retry.');
 
-        // Check if recently synced (unless --force is used)
-        if (! $this->option('force') && $device->last_synced_at && $device->last_synced_at->diffInMinutes(now()) < 5) {
-            $this->warn("Device synced recently ({$device->last_synced_at->diffForHumans()}). Use --force to retry.");
-
-            return 0;
+            return self::SUCCESS;
         }
 
-        try {
-            // Test connectivity first
-            $this->line("🔌 Testing device connectivity...");
-            if (! ZktecoWebService::testConnectivity($device->ip_address, $device->port)) {
-                $this->error("❌ Cannot reach device at {$device->ip_address}:{$device->port}");
-                $this->line("   Device may be offline or unreachable.");
-                Log::warning("Device unreachable during pull-database", [
-                    'device_id' => $device->id,
-                    'ip' => $device->ip_address,
-                ]);
+        if (! ZktecoWebService::testConnectivity($device->ip_address, $device->port ?? 8000)) {
+            $this->error("Cannot reach device at {$device->ip_address}:{$device->port}");
 
-                return 1;
-            }
-            $this->line("✓ Device is online");
+            return self::FAILURE;
+        }
 
-            // Pull users from device
-            $this->line("📥 Requesting user database from device...");
-            $remoteUsers = ZktecoWebService::pullUsersFromDevice(
-                $device->ip_address,
-                $device->port
-            );
+        $remoteUsers = ZktecoWebService::pullUsersFromDevice($device->ip_address, $device->port ?? 8000);
 
-            if ($remoteUsers === null) {
-                $this->warn("⚠️  Device didn't return user list via HTTP API");
-                $this->line("   (Device may not support HTTP user API in push mode)");
-                $this->line("   Continuing with auto-registration on next attendance...");
-
-                $device->update(['last_synced_at' => now()]);
-
-                return 0;
-            }
-
-            $this->info("✓ Retrieved ".count($remoteUsers)." users from device");
-
-            // Get default employment values
-            $defaultEmploymentType = EmploymentType::firstOrCreate(
-                ['name' => 'Regular'],
-                ['description' => 'Regular employee']
-            );
-
-            $defaultDepartment = Department::firstOrCreate(
-                ['department_name' => 'General'],
-                ['description' => 'General department']
-            );
-
-            $defaultPosition = Position::firstOrCreate(
-                ['position_name' => 'Staff'],
-                ['description' => 'Staff position']
-            );
-
-            // Process users
-            $new = 0;
-            $updated = 0;
-            $skipped = 0;
-
-            $this->line("\n📋 Processing users:");
-
-            foreach ($remoteUsers as $remoteUser) {
-                try {
-                    // Extract user info
-                    $biometricId = $remoteUser['pin'] ?? $remoteUser['id'] ?? null;
-                    $firstName = $remoteUser['first_name'] ?? $remoteUser['name'] ?? 'Device';
-                    $lastName = $remoteUser['last_name'] ?? 'User '.$biometricId;
-
-                    if (! $biometricId) {
-                        $this->line("  ⊘ Skipped: Invalid user (no ID)");
-                        $skipped++;
-                        continue;
-                    }
-
-                    // Check if employee exists
-                    /** @var \App\Models\Employee|null $employee */
-                    $employee = Employee::where('biometric_id', $biometricId)->first();
-
-                    if ($employee) {
-                        // Update if needed
-                        $updated_fields = false;
-                        if ($employee->first_name === 'Device User' || $employee->first_name === 'Auto User') {
-                            $employee->update([
-                                'first_name' => $firstName,
-                                'last_name' => $lastName,
-                            ]);
-                            $updated_fields = true;
-                        }
-
-                        if ($updated_fields) {
-                            $this->line("  ↻ Updated: Biometric {$biometricId} → {$employee->full_name}");
-                            $updated++;
-                        } else {
-                            $this->line("  ✓ Exists: Biometric {$biometricId} → {$employee->full_name}");
-                            $skipped++;
-                        }
-                    } else {
-                        // Create new employee
-                        $newEmployee = Employee::create([
-                            'biometric_id' => $biometricId,
-                            'first_name' => $firstName,
-                            'last_name' => $lastName,
-                            'email' => strtolower($firstName.'.'.$lastName.'@'.$device->name.'.local'),
-                            'phone' => null,
-                            'address' => null,
-                            'department_id' => $defaultDepartment->id,
-                            'position_id' => $defaultPosition->id,
-                            'employment_type_id' => $defaultEmploymentType->id,
-                            'hired_date' => now(),
-                            'status' => 'active',
-                        ]);
-
-                        $this->line("  ✚ Created: Biometric {$biometricId} → {$newEmployee->full_name} (ID: {$newEmployee->id})");
-                        $new++;
-
-                        Log::info("Auto-registered device user: {$newEmployee->full_name} ({$biometricId})", [
-                            'device_id' => $device->id,
-                            'employee_id' => $newEmployee->id,
-                        ]);
-                    }
-                } catch (\Exception $e) {
-                    $this->line("  ✗ Error processing user: {$e->getMessage()}");
-                    Log::error("Error processing device user", [
-                        'device_id' => $device->id,
-                        'user_data' => $remoteUser,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-
-            // Summary
-            $this->info("\n📊 Summary:");
-            $this->info("   Created:  {$new}");
-            $this->info("   Updated:  {$updated}");
-            $this->info("   Existing: {$skipped}");
-
-            // Update device sync time
+        if ($remoteUsers === null) {
+            $this->warn('The device does not expose a readable HTTP user API.');
+            $this->line('Push-mode user records will be imported when the device sends OPERLOG USER records.');
             $device->update(['last_synced_at' => now()]);
 
-            $this->info("\n✅ Device user database pull completed!");
-
-            return 0;
-        } catch (\Exception $e) {
-            $this->error("Error: {$e->getMessage()}");
-            Log::error("Device database pull error: {$e->getMessage()}");
-
-            return 1;
+            return self::SUCCESS;
         }
+
+        $defaults = [
+            'employment_type_id' => EmploymentType::firstOrCreate(['name' => 'Regular'], ['description' => 'Regular employee'])->id,
+            'department_id' => Department::firstOrCreate(['department_name' => 'General'], ['description' => 'General department'])->id,
+            'position_id' => Position::firstOrCreate(['position_name' => 'Staff'], ['description' => 'Staff position'])->id,
+        ];
+
+        $created = 0;
+        $mapped = 0;
+
+        foreach ($remoteUsers as $remoteUser) {
+            $pin = trim((string) ($remoteUser['pin'] ?? $remoteUser['id'] ?? ''));
+            if ($pin === '') {
+                continue;
+            }
+
+            $name = trim((string) ($remoteUser['name'] ?? 'Device User'));
+            $parts = preg_split('/\s+/', $name) ?: [];
+            $firstName = $remoteUser['first_name'] ?? ($parts[0] ?? 'Device');
+            $lastName = $remoteUser['last_name'] ?? (count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : "User {$pin}");
+
+            $employee = Employee::query()
+                ->where('biometric_id', $pin)
+                ->orWhere('employee_id', $pin)
+                ->first();
+
+            if ($employee) {
+                if (empty($employee->biometric_id)) {
+                    $employee->forceFill(['biometric_id' => $pin])->save();
+                }
+                $mapped++;
+            } else {
+                $email = "device.{$pin}." . Str::slug($firstName.'-'.$lastName, '.') . '@maptech.local';
+                $user = User::firstOrCreate(
+                    ['email' => $email],
+                    ['name' => trim($firstName.' '.$lastName), 'password' => Hash::make(Str::random(32))]
+                );
+
+                $employee = Employee::create(array_merge([
+                    'user_id' => $user->id,
+                    'employee_id' => 'BIO-'.$pin,
+                    'biometric_id' => $pin,
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'email' => $email,
+                    'joining_date' => now()->toDateString(),
+                    'employment_status' => 'Active',
+                    'is_active' => true,
+                ], $defaults));
+                $created++;
+            }
+
+            EmployeeDevice::updateOrCreate(
+                ['device_identifier' => $pin],
+                ['employee_id' => $employee->id, 'device_name' => $device->name, 'is_primary' => true]
+            );
+        }
+
+        $device->update(['last_synced_at' => now()]);
+        $this->info("Imported {$created} new users and mapped {$mapped} existing users without renaming them.");
+
+        return self::SUCCESS;
     }
 }

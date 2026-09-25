@@ -14,7 +14,9 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Illuminate\Database\UniqueConstraintViolationException;
 
 /**
  * Handles ZKTeco ADMS (Attendance Data Management System) push protocol.
@@ -48,12 +50,12 @@ class IclockController extends Controller
 
         $body = implode("\r\n", [
             'GET OPTION FROM: '.$sn,
-            'ATTLOGStamp=9999',
-            'OPERLOGStamp=9999',
+            'ATTLOGStamp=0',
+            'OPERLOGStamp=0',
             'ATTPHOTOStamp=0',
             'ErrorDelay=30',
             'Delay=10',
-            'TransTimes=00:00;14:05',
+            'TransTimes=00:00;23:59',
             'TransInterval=1',
             'TransFlag=TransData AttLog OpLog EnrollUser',
             'TimeZone=+8',
@@ -92,7 +94,11 @@ class IclockController extends Controller
         }
 
         // Device pushes enrollment user data
-        if (stripos($table, 'ENROLL_USER') !== false || stripos($body, 'ENROLL_USER') !== false) {
+        if (
+            stripos($table, 'ENROLL_USER') !== false
+            || stripos($body, 'ENROLL_USER') !== false
+            || preg_match('/(?:^|\R)USER\s+PIN=/i', $body)
+        ) {
             $this->processEnrollment($device, $body);
         }
 
@@ -106,7 +112,16 @@ class IclockController extends Controller
      */
     public function getRequest(Request $request): Response
     {
-        // No commands queued — tell device nothing to do
+        $sn = $request->query('SN', $request->query('sn', ''));
+
+        if ($sn && Cache::add("zkteco.query-attlog.{$sn}", true, now()->addMinutes(10))) {
+            $start = now()->startOfMonth()->format('Y-m-d H:i:s');
+            $end = now()->endOfDay()->format('Y-m-d H:i:s');
+
+            return response("C:DATA QUERY ATTLOG StartTime={$start} EndTime={$end}\r\n", 200)
+                ->header('Content-Type', 'text/plain');
+        }
+
         return response("OK\n", 200)->header('Content-Type', 'text/plain');
     }
 
@@ -213,7 +228,11 @@ class IclockController extends Controller
                     $attendance->overtime_reason = 'Auto-detected from checkout time.';
                 }
             }
-            $attendance->save();
+            try {
+                $attendance->save();
+            } catch (UniqueConstraintViolationException) {
+                Log::debug("ADMS: Ignored duplicate attendance for employee {$employee->id} on {$date}.");
+            }
             $processed++;
         }
 
@@ -226,37 +245,57 @@ class IclockController extends Controller
     private function processEnrollment(BiometricDevice $device, string $body): void
     {
         $lines = preg_split('/\r\n|\n|\r/', $body);
+        $processed = 0;
+
         foreach ($lines as $line) {
             $line = trim($line);
             if ($line === '' || stripos($line, 'ENROLL_USER') !== false) {
                 continue;
             }
 
-            $parts = preg_split('/\t+/', $line);
-            // Format: PIN  Name  Privilege  Password  Card  Group  TimeZone  VerifyStyle
-            if (count($parts) < 2) {
+            $pin = null;
+            $name = null;
+
+            if (preg_match('/^USER\s+PIN=(\S+)\s+Name=(.*?)\s+Pri=/i', $line, $matches)) {
+                $pin = trim($matches[1]);
+                $name = trim($matches[2]);
+            } else {
+                $parts = preg_split('/\t+/', $line);
+                if (count($parts) >= 2) {
+                    $pin = trim($parts[0]);
+                    $name = trim($parts[1]);
+                }
+            }
+
+            if (empty($pin)) {
                 continue;
             }
 
-            $pin  = trim($parts[0]);
-            $name = trim($parts[1] ?? '');
+            $employee = Employee::query()->where('biometric_id', $pin)->first();
 
-            if ($pin === '') {
-                continue;
+            if (! $employee) {
+                $employee = Employee::query()->where('employee_id', $pin)->first();
             }
 
-            // Try to match by biometric_id and update employee name if blank
-            $employee = $this->resolveEmployee($pin, $device);
-            if ($employee && empty($employee->biometric_id)) {
+            if (! $employee) {
+                $employee = $this->autoCreateEmployeeFromPin($pin, $device, $name ?: null);
+            } elseif (empty($employee->biometric_id)) {
                 $employee->forceFill(['biometric_id' => $pin])->save();
             }
 
-            // Save device enrollment mapping
-            EmployeeDevice::firstOrCreate(
+            EmployeeDevice::updateOrCreate(
                 ['device_identifier' => $pin],
-                ['employee_id' => $employee?->id, 'device_name' => $device->name, 'is_primary' => true]
+                [
+                    'employee_id' => $employee?->id,
+                    'device_name' => $device->name,
+                    'is_primary' => true,
+                ]
             );
+
+            $processed++;
         }
+
+        Log::info("ADMS: Imported {$processed} device user record(s) from {$device->name}.");
     }
 
     /**
@@ -272,7 +311,7 @@ class IclockController extends Controller
             ?? $this->autoCreateEmployeeFromPin($pin, $device);
     }
 
-    private function autoCreateEmployeeFromPin(string $pin, BiometricDevice $device): ?Employee
+    private function autoCreateEmployeeFromPin(string $pin, BiometricDevice $device, ?string $deviceName = null): ?Employee
     {
         if ($pin === '') {
             return null;
@@ -280,14 +319,24 @@ class IclockController extends Controller
 
         try {
             return DB::transaction(function () use ($pin, $device): Employee {
-                $existing = Employee::query()->where('biometric_id', $pin)->first();
+                $existing = Employee::withTrashed()->where('biometric_id', $pin)->first();
                 if ($existing) {
+                    if ($existing->trashed()) {
+                        $existing->restore();
+                    }
+
                     return $existing;
                 }
 
                 $hash = substr(sha1($pin), 0, 12);
                 $userEmail = "auto.user.{$hash}@maptech.local";
                 $employeeEmail = "auto.employee.{$hash}@maptech.local";
+                $emailSuffix = 1;
+
+                while (Employee::withTrashed()->where('email', $employeeEmail)->exists()) {
+                    $employeeEmail = "auto.employee.{$hash}-{$emailSuffix}@maptech.local";
+                    $emailSuffix++;
+                }
 
                 $user = User::query()->firstOrCreate(
                     ['email' => $userEmail],
@@ -297,11 +346,17 @@ class IclockController extends Controller
                     ]
                 );
 
+                $nameParts = preg_split('/\s+/', trim($deviceName ?? '')) ?: [];
+                $firstName = $nameParts[0] ?? 'Auto';
+                $lastName = count($nameParts) > 1
+                    ? implode(' ', array_slice($nameParts, 1))
+                    : "User {$pin}";
+
                 $employee = Employee::query()->create([
                     'user_id' => $user->id,
                     'employee_id' => $this->generateUniqueEmployeeCode($pin),
-                    'first_name' => 'Auto',
-                    'last_name' => "User {$pin}",
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
                     'email' => $employeeEmail,
                     'joining_date' => now()->toDateString(),
                     'employment_status' => 'Active',
@@ -344,7 +399,7 @@ class IclockController extends Controller
         $candidate = Str::upper(substr($base, 0, 24));
         $suffix = 1;
 
-        while (Employee::query()->where('employee_id', $candidate)->exists()) {
+        while (Employee::withTrashed()->where('employee_id', $candidate)->exists()) {
             $tail = '-'.$suffix;
             $candidate = Str::upper(substr($base, 0, 24 - strlen($tail))).$tail;
             $suffix++;
