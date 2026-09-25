@@ -30,11 +30,19 @@ class ZktecoAttendanceService
             $date = $timestamp->toDateString();
             $time = $timestamp->format('H:i:s');
             $status = $this->resolveStatus($log, $time);
+            $isCheckout = $this->isCheckoutLog($log);
 
-            $attendance = Attendance::firstOrNew([
-                'employee_id' => $employee->id,
-                'attendance_date' => $date,
-            ]);
+            $attendance = Attendance::query()
+                ->where('employee_id', $employee->id)
+                ->whereDate('attendance_date', $date)
+                ->first();
+
+            if (! $attendance) {
+                $attendance = new Attendance([
+                    'employee_id' => $employee->id,
+                    'attendance_date' => $date,
+                ]);
+            }
 
             if (! $attendance->exists) {
                 $attendance->check_in_time = $time;
@@ -45,12 +53,14 @@ class ZktecoAttendanceService
                     $attendance->check_in_time = $time;
                 }
 
-                if (empty($attendance->check_out_time) || $time > $attendance->check_out_time) {
+                if ($isCheckout && (empty($attendance->check_out_time) || $time > $attendance->check_out_time)) {
                     $attendance->check_out_time = $time;
                 }
 
-                if ($attendance->status === 'Absent') {
+                if ($attendance->status === 'Absent' && $attendance->check_in_time) {
                     $attendance->status = $status;
+                } elseif (! in_array($attendance->status, ['Leave', 'Overtime'], true) && $attendance->check_in_time) {
+                    $attendance->status = Attendance::statusForCheckIn($attendance->check_in_time);
                 }
             }
 
@@ -135,7 +145,18 @@ class ZktecoAttendanceService
             return 'Half Day';
         }
 
-        // On-time attendance window: 12:01 AM to 7:59:59 AM.
-        return ($time >= '00:01:00' && $time <= '07:59:59') ? 'Present' : 'Late';
+        return Attendance::statusForCheckIn($time);
+    }
+
+    protected function isCheckoutLog(array $log): bool
+    {
+        $event = $log['status'] ?? $log['event'] ?? $log['type'] ?? null;
+
+        if (is_numeric($event)) {
+            return (int) $event === 1;
+        }
+
+        return str_contains(strtolower((string) $event), 'check-out')
+            || str_contains(strtolower((string) $event), 'checkout');
     }
 }

@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Employee;
+use Carbon\Carbon;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\UniqueConstraintViolationException;
 
 class AttendanceController extends Controller
 {
@@ -29,9 +32,13 @@ class AttendanceController extends Controller
     {
         $dateFrom = $request->get('date_from', now()->startOfMonth()->toDateString());
         $dateTo = $request->get('date_to', now()->toDateString());
+        $dateTo = min(Carbon::parse($dateTo)->toDateString(), Carbon::today()->toDateString());
         $employeeId = $request->get('employee_id');
+        $status = $request->get('status');
 
-        $employees = Employee::orderBy('first_name', 'asc')->get();
+        $employees = Employee::with(['department', 'position', 'status'])
+            ->orderBy('first_name', 'asc')
+            ->get();
         $selectedEmployee = $employeeId ? Employee::findOrFail($employeeId) : null;
 
         $query = Attendance::with(['employee.department', 'employee.position', 'employee.status'])
@@ -42,17 +49,36 @@ class AttendanceController extends Controller
             $query->where('employee_id', $employeeId);
         }
 
-        $totalCount = (clone $query)->count();
-        $presentCount = (clone $query)->where('status', 'Present')->count();
-        $lateCount = (clone $query)->where('status', 'Late')->count();
-        $overtimeCount = (clone $query)->where('status', 'Overtime')->count();
-        $otherCount = $totalCount - $presentCount - $lateCount - $overtimeCount;
+        $recordedAttendances = $query->get();
+        $attendances = $this->buildHrDtrRows(
+            $recordedAttendances,
+            $employees,
+            Carbon::parse($dateFrom),
+            Carbon::parse($dateTo),
+            $employeeId
+        );
 
-        $attendances = $query
-            ->orderByDesc('attendance_date')
-            ->orderByDesc('check_in_time')
-            ->paginate(100)
-            ->withQueryString();
+        if (in_array($status, ['Absent', 'Leave'], true)) {
+            $attendances = $attendances->where('status', $status)->values();
+        } else {
+            $status = '';
+        }
+
+        $totalCount = $attendances->count();
+        $presentCount = $attendances->where('status', 'Present')->count();
+        $lateCount = $attendances->where('status', 'Late')->count();
+        $overtimeCount = $attendances->where('status', 'Overtime')->count();
+        $leaveCount = $attendances->where('status', 'Leave')->count();
+        $absentCount = $attendances->where('status', 'Absent')->count();
+        $otherCount = $totalCount - $presentCount - $lateCount - $overtimeCount - $leaveCount - $absentCount;
+
+        $attendances = new LengthAwarePaginator(
+            $attendances->forPage((int) $request->get('page', 1), 100)->values(),
+            $totalCount,
+            100,
+            (int) $request->get('page', 1),
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         return view('admin.attendance.hr_admin', compact(
             'attendances',
@@ -60,13 +86,69 @@ class AttendanceController extends Controller
             'dateTo',
             'employees',
             'employeeId',
+            'status',
             'selectedEmployee',
             'totalCount',
             'presentCount',
             'lateCount',
             'overtimeCount',
+            'leaveCount',
+            'absentCount',
             'otherCount'
         ));
+    }
+
+    /**
+     * Add weekday DTR rows for active employees without a recorded attendance entry.
+     *
+     * Employees marked "On Leave" receive Leave rows; other eligible employees
+     * receive Absent rows. Existing records always take precedence.
+     */
+    private function buildHrDtrRows($recordedAttendances, $employees, Carbon $dateFrom, Carbon $dateTo, $employeeId)
+    {
+        $rows = $recordedAttendances->keyBy(
+            fn (Attendance $attendance) => $attendance->employee_id . '|' . $attendance->attendance_date->toDateString()
+        );
+
+        $eligibleEmployees = $employees->filter(function (Employee $employee) use ($employeeId) {
+            if ($employeeId && (string) $employee->id !== (string) $employeeId) {
+                return false;
+            }
+
+            return $employee->is_active
+                && in_array($employee->employment_status, ['Active', 'On Leave'], true);
+        });
+
+        for ($date = $dateFrom->copy()->startOfDay(); $date->lte($dateTo); $date->addDay()) {
+            if ($date->isWeekend()) {
+                continue;
+            }
+
+            foreach ($eligibleEmployees as $employee) {
+                if ($employee->joining_date && $employee->joining_date->gt($date)) {
+                    continue;
+                }
+
+                $key = $employee->id . '|' . $date->toDateString();
+                if ($rows->has($key)) {
+                    continue;
+                }
+
+                $attendance = new Attendance([
+                    'employee_id' => $employee->id,
+                    'attendance_date' => $date->toDateString(),
+                    'status' => $employee->employment_status === 'On Leave' ? 'Leave' : 'Absent',
+                    'source' => 'DTR status',
+                ]);
+                $attendance->setRelation('employee', $employee);
+                $rows->put($key, $attendance);
+            }
+        }
+
+        return $rows->sort(function (Attendance $left, Attendance $right) {
+            return $right->attendance_date <=> $left->attendance_date
+                ?: strcmp((string) $right->check_in_time, (string) $left->check_in_time);
+        })->values();
     }
 
     public function receipt(Request $request)
@@ -74,21 +156,33 @@ class AttendanceController extends Controller
         $scope = $request->get('scope', 'single');
         $dateFrom = $request->get('date_from', now()->startOfMonth()->toDateString());
         $dateTo = $request->get('date_to', now()->toDateString());
+        $dateTo = min(Carbon::parse($dateTo)->toDateString(), Carbon::today()->toDateString());
         $employeeId = $request->get('employee_id');
 
         $employee = ($scope === 'single' && $employeeId) ? Employee::findOrFail($employeeId) : null;
+        $employees = Employee::with(['department', 'position', 'status'])
+            ->orderBy('first_name', 'asc')
+            ->get();
 
         $query = Attendance::with(['employee.department', 'employee.position', 'employee.status'])
-            ->whereBetween('attendance_date', [$dateFrom, $dateTo]);
+            ->whereDate('attendance_date', '>=', $dateFrom)
+            ->whereDate('attendance_date', '<=', $dateTo);
 
         if ($scope === 'single' && $employeeId) {
             $query->where('employee_id', $employeeId);
         }
 
-        $attendances = $query
-            ->orderByDesc('attendance_date')
-            ->orderByDesc('check_in_time')
-            ->get();
+        $recordedAttendances = $query->get();
+        $attendances = $this->buildHrDtrRows(
+            $recordedAttendances,
+            $employees,
+            Carbon::parse($dateFrom),
+            Carbon::parse($dateTo),
+            $scope === 'single' ? $employeeId : null
+        )->sort(function (Attendance $left, Attendance $right) {
+            return $right->attendance_date <=> $left->attendance_date
+                ?: strcmp((string) $right->check_in_time, (string) $left->check_in_time);
+        })->values();
 
         $totalEmployees = $attendances->pluck('employee_id')->unique()->count();
 
@@ -115,6 +209,14 @@ class AttendanceController extends Controller
             'notes' => 'nullable|string',
             'overtime_reason' => 'nullable|string|required_if:status,Overtime',
         ]);
+
+        if (
+            ! empty($data['check_in_time'])
+            && Attendance::isHalfDayCheckIn($data['check_in_time'])
+            && ! in_array($data['status'], ['Absent', 'Leave'], true)
+        ) {
+            $data['status'] = 'Half Day';
+        }
 
         $overtime = ($data['status'] ?? null) === 'Overtime';
 
@@ -156,6 +258,69 @@ class AttendanceController extends Controller
         }
 
         return back()->with('success', 'Attendance saved.');
+    }
+
+    public function updateStatus(Request $request)
+    {
+        $data = $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'attendance_date' => 'required|date',
+            'status' => 'required|in:Absent,Leave',
+            'return_url' => 'nullable|url',
+        ]);
+
+        $attributes = [
+            'status' => $data['status'],
+            'check_in_time' => null,
+            'check_out_time' => null,
+            'source' => 'HR Admin DTR',
+            'notes' => $data['status'] === 'Leave'
+                ? 'Marked on leave by HR Admin.'
+                : 'Marked absent by HR Admin.',
+            'overtime_reason' => null,
+            'overtime_approval_status' => null,
+            'overtime_approval_reason' => null,
+            'overtime_approved_by' => null,
+            'overtime_approved_at' => null,
+        ];
+
+        $identity = [
+            'employee_id' => $data['employee_id'],
+            'attendance_date' => $data['attendance_date'],
+        ];
+
+        $attendance = Attendance::query()
+            ->where('employee_id', $data['employee_id'])
+            ->whereDate('attendance_date', $data['attendance_date'])
+            ->first();
+
+        if ($attendance) {
+            $attendance->forceFill($attributes)->save();
+        } else {
+            try {
+                Attendance::create($identity + $attributes);
+            } catch (UniqueConstraintViolationException) {
+                // A device sync can create the same row between the lookup and insert.
+                Attendance::query()
+                    ->where('employee_id', $data['employee_id'])
+                    ->whereDate('attendance_date', $data['attendance_date'])
+                    ->update($attributes);
+            }
+        }
+
+        if (class_exists('\App\Models\ActivityLog')) {
+            \App\Models\ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'update_attendance_status',
+                'model' => 'Attendance',
+                'model_id' => null,
+                'description' => "Marked employee {$data['employee_id']} as {$data['status']} for {$data['attendance_date']}.",
+            ]);
+        }
+
+        return $data['return_url']
+            ? redirect()->to($data['return_url'])->with('success', 'Attendance status updated.')
+            : back()->with('success', 'Attendance status updated.');
     }
 
     public function reviewOvertime(Request $request, Attendance $attendance)

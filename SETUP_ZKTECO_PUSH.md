@@ -1,7 +1,7 @@
 # ZKTeco Device Configuration - PUSH Mode Setup
 
 ## Problem
-The ZKTeco device at 192.168.1.186 is not pushing attendance data to the server.
+The ZKTeco device must be able to reach the Laravel server over the same LAN.
 
 ## Solution
 You need to configure the device's PUSH URL to point to your server.
@@ -29,14 +29,14 @@ In the device settings, look for one of these:
 
 Set it to:
 ```
-http://192.168.1.50:8000/iclock/cdata
+http://192.168.50.132:8000/iclock/cdata
 ```
 
 Alternative formats it might accept:
 ```
-http://192.168.1.50:8000/api/iclock/cdata
-192.168.1.50:8000
-192.168.1.50 (with port 8000 separately)
+http://192.168.50.132:8000/api/iclock/cdata
+192.168.50.132:8000
+192.168.50.132 (with port 8000 separately)
 ```
 
 ---
@@ -56,7 +56,7 @@ Set the attendance push interval to:
 2. **Expected Result:** Connection should succeed (status = OK)
 
 If connection fails:
-- Check device can reach 192.168.1.50 with `ping 192.168.1.50`
+- Check device can reach 192.168.50.132 with `ping 192.168.50.132`
 - Verify server is running: `php artisan serve --host=0.0.0.0 --port=8000`
 - Check firewall settings
 
@@ -67,14 +67,14 @@ If connection fails:
 Once configured, fingerprint scans should:
 1. Be recorded on the device immediately
 2. Be sent to server within 15-60 seconds
-3. Appear in the web dashboard at http://192.168.1.50:8000/admin/biometric-devices/1
+3. Appear in the web dashboard at http://192.168.50.132:8000/admin/biometric-devices/1
 
 ---
 
 ## Server Status
 
 Your Laravel server is ready to receive data:
-- ✅ Running on http://192.168.1.50:8000
+- ✅ Running on http://192.168.50.132:8000
 - ✅ Endpoint ready: POST /iclock/cdata
 - ✅ Database connected
 - ✅ Logging enabled

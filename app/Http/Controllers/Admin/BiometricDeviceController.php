@@ -143,10 +143,13 @@ class BiometricDeviceController extends Controller
         }
 
         $result = $zkteco->pullAndProcessAttendance($biometricDevice);
+        $hasErrors = ! empty($result['errors']);
 
         return response()->json([
-            'success' => empty($result['errors']),
-            'message' => "Processed {$result['processed']} of {$result['total']} records.",
+            'success' => ! $hasErrors,
+            'message' => $hasErrors
+                ? implode(' ', $result['errors'])
+                : "Processed {$result['processed']} of {$result['total']} records.",
             'data' => $result,
         ]);
     }

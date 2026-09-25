@@ -33,31 +33,37 @@ class ZktecoService
 
     const CMD_DISABLE_DEVICE = 1003;
 
-    const CMD_GET_TIME = 1004;
+    const CMD_GET_TIME = 201;
 
-    const CMD_SET_TIME = 1005;
+    const CMD_SET_TIME = 202;
 
-    const CMD_GET_VERSION = 1006;
+    const CMD_GET_VERSION = 1100;
 
-    const CMD_GET_SERIAL = 1007;
+    const CMD_GET_SERIAL = 11;
 
-    const CMD_GET_ATTLOG = 1014;
+    const CMD_GET_ATTLOG = 13;
 
-    const CMD_CLEAR_ATTLOG = 1015;
+    const CMD_CLEAR_ATTLOG = 15;
 
-    const CMD_REG_EVENT = 1017;
+    const CMD_REG_EVENT = 500;
 
-    const CMD_GET_USER = 1009;
+    const CMD_GET_USER = 9;
 
-    const CMD_SET_USER = 1008;
+    const CMD_SET_USER = 8;
 
-    const CMD_DEL_USER = 1010;
+    const CMD_DEL_USER = 18;
 
-    const CMD_GET_FREE_SZ = 1018;
+    const CMD_GET_FREE_SZ = 50;
 
-    const CMD_GET_DEVICE_INFO = 1020;
+    const CMD_GET_DEVICE_INFO = 11;
 
-    const CMD_RESTART = 1013;
+    const CMD_RESTART = 1004;
+
+    const CMD_PREPARE_DATA = 1500;
+
+    const CMD_DATA = 1501;
+
+    const CMD_FREE_DATA = 1502;
 
     /**
      * Connection timeout in seconds.
@@ -195,12 +201,14 @@ class ZktecoService
      */
     public function getSerialNumber(): ?string
     {
-        $response = $this->sendReadCommand(self::CMD_GET_SERIAL);
+        $response = $this->sendReadCommand(self::CMD_GET_SERIAL, '~SerialNumber');
         if ($response === false) {
             return null;
         }
 
-        return $this->extractStringData($response);
+        $value = $this->extractStringData($response);
+
+        return trim(str_contains($value, '=') ? (string) str($value)->afterLast('=') : $value);
     }
 
     /**
@@ -227,9 +235,7 @@ class ZktecoService
         }
         $timeData = $this->extractData($response);
         if (strlen($timeData) >= 4) {
-            $timestamp = unpack('V', substr($timeData, 0, 4))[1];
-
-            return Carbon::createFromTimestamp($timestamp);
+            return $this->decodeDeviceTime(substr($timeData, 0, 4));
         }
 
         return null;
@@ -297,30 +303,55 @@ class ZktecoService
             return $logs;
         }
 
+        $command = unpack('v', substr($response, 0, 2))[1] ?? 0;
         $data = $this->extractData($response);
 
-        // ZKTeco attendance record format: each record is 40 bytes
-        // Structure: user_id(24) + timestamp(4) + status(1) + reserved(11)
+        if ($command === self::CMD_PREPARE_DATA && strlen($data) >= 4) {
+            $expectedSize = unpack('V', substr($data, 0, 4))[1];
+            $data = '';
+
+            while (strlen($data) < $expectedSize) {
+                $packet = $this->readResponse();
+                if ($packet === false) {
+                    break;
+                }
+
+                $packetCommand = unpack('v', substr($packet, 0, 2))[1] ?? 0;
+                if ($packetCommand !== self::CMD_DATA) {
+                    break;
+                }
+
+                $data .= $this->extractData($packet);
+            }
+
+            $this->sendEmptyCommand(self::CMD_FREE_DATA);
+        }
+
+        // ZKTeco attendance record format: uid(2) + user ID(24) +
+        // device timestamp(4) + status(1) + verification(1) + work code(2)...
         $recordSize = 40;
         $totalRecords = strlen($data);
 
         for ($offset = 0; $offset + $recordSize <= $totalRecords; $offset += $recordSize) {
             $record = substr($data, $offset, $recordSize);
 
-            // Extract user ID (padded to 24 bytes, null-terminated)
-            $userId = trim(substr($record, 0, 24), "\x00 ");
+            // The first two bytes are the internal device UID.
+            $userId = trim(substr($record, 2, 24), "\x00 ");
 
-            // Extract timestamp (4 bytes, little-endian)
-            $timestampRaw = substr($record, 24, 4);
+            // ZKTeco stores time as packed minutes since 2000, not Unix time.
+            $timestampRaw = substr($record, 26, 4);
             if (strlen($timestampRaw) < 4) {
                 continue;
             }
 
-            $timestamp = unpack('V', $timestampRaw)[1];
-            $dateTime = Carbon::createFromTimestamp($timestamp);
+            try {
+                $dateTime = $this->decodeDeviceTime($timestampRaw);
+            } catch (\Throwable) {
+                continue;
+            }
 
-            // Extract status (1 byte starting at offset 28)
-            $status = ord($record[28] ?? "\x00");
+            // Extract status (1 byte starting at offset 30)
+            $status = ord($record[30] ?? "\x00");
 
             $logs[] = [
                 'biometric_id' => $userId,
@@ -449,19 +480,11 @@ class ZktecoService
      */
     protected function buildCommand(int $command, string $data): string
     {
-        $header = "\x50\x50\x50\x50";  // Magic bytes
-        $session = pack('v', $this->sessionId);
-        $replyId = pack('v', $this->replyId++);
-        $cmd = pack('v', $command);
+        $replyId = $this->replyId++;
+        $packet = pack('vvvv', $command, 0, $this->sessionId, $replyId).$data;
+        $checksum = $this->calculateChecksum($packet);
 
-        $dataSize = strlen($data);
-        $size = pack('v', $dataSize);
-
-        // Checksum calculation
-        $checksumData = $header.$session.$replyId.$cmd.$size.$data;
-        $checksum = $this->calculateChecksum($checksumData);
-
-        return $header.$session.$replyId.$cmd.$checksum.$size.$data;
+        return pack('vvvv', $command, $checksum, $this->sessionId, $replyId).$data;
     }
 
     /**
@@ -470,11 +493,15 @@ class ZktecoService
     protected function calculateChecksum(string $data): string
     {
         $sum = 0;
-        for ($i = 0; $i < strlen($data); $i++) {
-            $sum += ord($data[$i]);
+        for ($i = 0, $length = strlen($data); $i < $length; $i += 2) {
+            $word = ord($data[$i]);
+            if ($i + 1 < $length) {
+                $word |= ord($data[$i + 1]) << 8;
+            }
+            $sum += $word;
         }
 
-        return pack('v', $sum & 0xFFFF);
+        return pack('v', (-$sum) & 0xFFFF);
     }
 
     /**
@@ -503,36 +530,14 @@ class ZktecoService
             return false;
         }
 
-        // Read 8-byte header
-        $header = @fread($this->socket, 8);
-        if ($header === false || strlen($header) < 8) {
+        // ZKTeco responses are one datagram: command, checksum, session,
+        // reply ID, followed by the response data.
+        $response = @fread($this->socket, 65535);
+        if ($response === false || strlen($response) < 8) {
             return false;
         }
 
-        // Parse header
-        $session = unpack('v', substr($header, 4, 2))[1];
-        $replyId = unpack('v', substr($header, 6, 2))[1];
-
-        // Read command (2 bytes), checksum (2 bytes), size (2 bytes)
-        $cmdBlock = @fread($this->socket, 6);
-        if ($cmdBlock === false || strlen($cmdBlock) < 6) {
-            return false;
-        }
-
-        $command = unpack('v', substr($cmdBlock, 0, 2))[1];
-        $dataSize = unpack('v', substr($cmdBlock, 4, 2))[1];
-
-        // Read data
-        $data = '';
-        if ($dataSize > 0) {
-            $data = @fread($this->socket, $dataSize);
-            if ($data === false) {
-                return false;
-            }
-        }
-
-        // Return the full response
-        return $header.$cmdBlock.$data;
+        return $response;
     }
 
     /**
@@ -540,9 +545,9 @@ class ZktecoService
      *
      * @return string|false
      */
-    protected function sendReadCommand(int $command)
+    protected function sendReadCommand(int $command, string $data = '')
     {
-        $commandData = $this->buildCommand($command, '');
+        $commandData = $this->buildCommand($command, $data);
         try {
             $this->sendCommand($commandData);
 
@@ -602,13 +607,33 @@ class ZktecoService
      */
     protected function extractData(string $response): string
     {
-        // Response format: header(8) + command(2) + checksum(2) + size(2) + data
-        if (strlen($response) <= 14) {
+        // Response format: command(2) + checksum(2) + session(2) + reply(2) + data
+        if (strlen($response) <= 8) {
             return '';
         }
-        $dataSize = unpack('v', substr($response, 12, 2))[1];
+        $dataSize = strlen($response) - 8;
 
-        return substr($response, 14, $dataSize);
+        return substr($response, 8, $dataSize);
+    }
+
+    /**
+     * Decode the ZKTeco packed timestamp used in attendance records.
+     */
+    protected function decodeDeviceTime(string $data): Carbon
+    {
+        $value = unpack('V', $data)[1];
+        $second = $value % 60;
+        $value = intdiv($value, 60);
+        $minute = $value % 60;
+        $value = intdiv($value, 60);
+        $hour = $value % 24;
+        $value = intdiv($value, 24);
+        $day = $value % 31 + 1;
+        $value = intdiv($value, 31);
+        $month = $value % 12 + 1;
+        $year = intdiv($value, 12) + 2000;
+
+        return Carbon::create($year, $month, $day, $hour, $minute, $second);
     }
 
     /**
@@ -624,7 +649,7 @@ class ZktecoService
         try {
             // Set the server IP and port for push communication
             $serverIp = $this->getServerIp();
-            $webhookUrl = route('device.zkteco.attendance', $device->device_token);
+            $webhookUrl = url('/iclock/cdata');
 
             // Parse the URL to get host
             $urlParts = parse_url($webhookUrl);

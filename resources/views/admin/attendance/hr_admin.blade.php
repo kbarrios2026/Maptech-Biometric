@@ -19,7 +19,6 @@
         <div class="col-12 col-xl-8 mt-0">
             <form method="GET" action="{{ route('admin.attendance.hr-admin') }}" class="attendance-toolbar">
                 <div class="toolbar-bar">
-                    <span class="toolbar-chip">Filter</span>
                     <input type="date" name="date_from" value="{{ $dateFrom }}" class="form-control">
                     <input type="date" name="date_to" value="{{ $dateTo }}" class="form-control">
                     <select name="employee_id" class="form-select">
@@ -29,6 +28,11 @@
                                 {{ $employee->full_name }} ({{ $employee->employee_id }})
                             </option>
                         @endforeach
+                    </select>
+                    <select name="status" class="form-select">
+                        <option value="" @selected($status === '')>All Statuses</option>
+                        <option value="Absent" @selected($status === 'Absent')>Absent</option>
+                        <option value="Leave" @selected($status === 'Leave')>On Leave</option>
                     </select>
                     <button type="submit" class="btn btn-primary">Filter</button>
                 </div>
@@ -87,6 +91,10 @@
                     <div class="report-value">{{ $selectedEmployee ? 'Single Employee' : 'All Employees' }}</div>
                 </div>
                 <div class="report-block">
+                    <div class="report-label">Status Filter</div>
+                    <div class="report-value">{{ $status === 'Leave' ? 'On Leave' : ($status ?: 'All Statuses') }}</div>
+                </div>
+                <div class="report-block">
                     <div class="report-label">Total Records</div>
                         <div class="report-value">{{ $attendances->total() }}</div>
                 </div>
@@ -103,8 +111,12 @@
                     <div class="report-value">{{ $overtimeCount }}</div>
                 </div>
                 <div class="report-block">
-                    <div class="report-label">Other</div>
-                    <div class="report-value">{{ $otherCount }}</div>
+                    <div class="report-label">On Leave</div>
+                    <div class="report-value">{{ $leaveCount }}</div>
+                </div>
+                <div class="report-block">
+                    <div class="report-label">Absent</div>
+                    <div class="report-value">{{ $absentCount }}</div>
                 </div>
                 <div class="report-block">
                     <div class="report-label">Report Date</div>
@@ -118,7 +130,7 @@
         </div>
     </div>
 
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3 mb-4 no-print">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-7 g-3 mb-4 no-print">
         <div class="col">
             <div class="card p-3 h-100 hr-summary-card">
                 <div class="text-muted">Attendance Records</div>
@@ -141,6 +153,18 @@
             <div class="card p-3 h-100 hr-summary-card">
                 <div class="text-muted">Overtime</div>
                 <h3 class="mb-0">{{ $overtimeCount }}</h3>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card p-3 h-100 hr-summary-card">
+                <div class="text-muted">On Leave</div>
+                <h3 class="mb-0 text-info">{{ $leaveCount }}</h3>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card p-3 h-100 hr-summary-card">
+                <div class="text-muted">Absent</div>
+                <h3 class="mb-0 text-danger">{{ $absentCount }}</h3>
             </div>
         </div>
         <div class="col">
@@ -170,8 +194,8 @@
                     @forelse($attendances as $attendance)
                         <tr class="{{ $attendance->status === 'Overtime' ? 'ot-row' : '' }}">
                             <td>
-                                <strong>{{ $attendance->employee?->full_name ?? 'Unknown' }}</strong><br>
-                                <small class="text-muted">{{ $attendance->employee?->employee_id ?? '-' }}</small>
+                                <strong class="employee-name">{{ $attendance->employee?->full_name ?? 'Unknown' }}</strong>
+                                <small class="text-muted employee-id">{{ $attendance->employee?->employee_id ?? '-' }}</small>
                             </td>
                             <td>{{ $attendance->employee?->department?->name ?? '-' }}</td>
                             <td>{{ $attendance->attendance_date?->format('M d, Y') ?? '-' }}</td>
@@ -181,10 +205,27 @@
                             <td>
                                 {{ $attendance->check_out_time ? \Illuminate\Support\Carbon::createFromFormat('H:i:s', $attendance->check_out_time)->format('h:i:s A') : '-' }}
                             </td>
-                            <td>
-                                <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : ($attendance->status === 'Overtime' ? 'bg-overtime' : 'bg-secondary')) }}">
-                                    {{ $attendance->status }}
-                                </span>
+                            <td class="status-cell">
+                                @if(in_array($attendance->status, ['Absent', 'Leave'], true))
+                                    <form method="POST" action="{{ route('admin.attendance.status') }}" class="absence-status-form">
+                                        @csrf
+                                        <input type="hidden" name="employee_id" value="{{ $attendance->employee_id }}">
+                                        <input type="hidden" name="attendance_date" value="{{ $attendance->attendance_date?->toDateString() }}">
+                                        <input type="hidden" name="return_url" value="{{ url()->full() }}">
+                                        <label class="visually-hidden" for="attendance-status-{{ $attendance->employee_id }}-{{ $attendance->attendance_date?->format('Ymd') }}">Update attendance status</label>
+                                        <select id="attendance-status-{{ $attendance->employee_id }}-{{ $attendance->attendance_date?->format('Ymd') }}" name="status" class="form-select form-select-sm status-select {{ $attendance->status === 'Leave' ? 'status-select-leave' : 'status-select-absent' }}" aria-label="Change attendance status">
+                                            <option value="Absent" @selected($attendance->status === 'Absent')>Absent</option>
+                                            <option value="Leave" @selected($attendance->status === 'Leave')>On Leave</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-primary status-save-button d-none" aria-label="Save attendance status" title="Save attendance status">
+                                            <i class="fas fa-check" aria-hidden="true"></i>
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : ($attendance->status === 'Overtime' ? 'bg-overtime' : 'bg-secondary')) }}">
+                                        {{ $attendance->status }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="ot-review-col">
                                 @if($attendance->status === 'Overtime')
@@ -270,7 +311,7 @@
 
     .toolbar-bar {
         display: grid;
-        grid-template-columns: auto minmax(160px, 220px) minmax(160px, 220px) minmax(220px, 1fr) auto;
+        grid-template-columns: minmax(130px, 1fr) minmax(130px, 1fr) minmax(180px, 1.4fr) minmax(115px, .9fr) auto;
         gap: 8px;
         align-items: center;
         padding: 8px;
@@ -397,6 +438,7 @@
     }
 
     .toolbar-bar .btn {
+        min-width: 60px;
         white-space: nowrap;
     }
 
@@ -415,6 +457,105 @@
         vertical-align: middle;
         font-size: .92rem;
         transition: background-color .18s ease;
+    }
+
+    .hr-attendance-table tbody tr {
+        height: 69px;
+    }
+
+    .hr-attendance-table td:last-child,
+    .hr-attendance-table th:last-child {
+        white-space: nowrap;
+    }
+
+    .hr-attendance-table .employee-name {
+        display: block;
+        white-space: nowrap;
+    }
+
+    .hr-attendance-table .employee-id {
+        display: block;
+    }
+
+    .status-cell {
+        min-width: 174px;
+        text-align: center;
+    }
+
+    .status-cell > .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .absence-status-form {
+        display: inline-flex;
+        align-items: center;
+        gap: 0;
+        margin: 0;
+        max-width: 174px;
+        vertical-align: middle;
+        justify-content: center;
+    }
+
+    .absence-status-form .status-select {
+        flex: 0 0 64px;
+        min-width: 0;
+        width: 64px;
+        height: 21px;
+        min-height: 21px;
+        padding: .1rem .25rem;
+        font-size: .7rem;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        text-align-last: center;
+        color: #fff;
+        border: 0;
+        border-radius: 6px;
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: none;
+    }
+
+    .absence-status-form .status-select-leave {
+        flex-basis: 78px;
+        width: 78px;
+    }
+
+    .absence-status-form .status-select-absent {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+
+    .absence-status-form .status-select-leave {
+        color: #1f2937;
+        background-color: #0dcaf0;
+        border-color: #0dcaf0;
+    }
+
+    .absence-status-form .status-select option {
+        color: #1f2937;
+        background: #fff;
+        font-weight: 400;
+    }
+
+    .absence-status-form .status-select:focus-visible {
+        box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .25);
+        outline: 0;
+    }
+
+    .absence-status-form .status-save-button {
+        flex: 0 0 auto;
+        width: 21px;
+        height: 21px;
+        padding: 0;
+        font-size: .64rem;
+        line-height: 1;
+        border-radius: 6px;
     }
 
     .hr-attendance-table tr.attendance-row-editing > td {
@@ -484,6 +625,16 @@
         max-width: 220px;
         margin-inline: auto;
         margin-top: .35rem;
+    }
+
+    @media (max-width: 768px) {
+        .status-cell {
+            min-width: 160px;
+        }
+
+        .absence-status-form {
+            max-width: 160px;
+        }
     }
 
     body.dark-mode .toolbar-bar {
@@ -586,6 +737,24 @@
 
 @section('scripts')
 <script>
+    document.querySelectorAll('.status-select').forEach((select) => {
+        const form = select.closest('.absence-status-form');
+        const saveButton = form?.querySelector('.status-save-button');
+        const savedStatus = select.value;
+
+        const syncStatusSaveButton = () => {
+            saveButton?.classList.toggle('d-none', select.value === savedStatus);
+        };
+
+        select.addEventListener('change', () => {
+            select.classList.toggle('status-select-leave', select.value === 'Leave');
+            select.classList.toggle('status-select-absent', select.value === 'Absent');
+            syncStatusSaveButton();
+        });
+
+        syncStatusSaveButton();
+    });
+
     function syncReviewVisualState(form, options = {}) {
         const row = form.closest('tr');
         const reviewCell = form.closest('.ot-review-col');

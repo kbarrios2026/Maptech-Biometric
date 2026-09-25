@@ -53,7 +53,7 @@ class PullBiometricAttendance extends Command
             if ($devices->isEmpty()) {
                 $this->warn('No active pull-mode devices found. Use --all or --device to specify.');
 
-                return Command::SUCCESS;
+                return $totalErrors > 0 ? Command::FAILURE : Command::SUCCESS;
             }
         }
 

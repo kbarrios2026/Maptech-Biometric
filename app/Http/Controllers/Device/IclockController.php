@@ -89,7 +89,12 @@ class IclockController extends Controller
         $body = $request->getContent();
 
         // Detect attendance log sections
-        if (stripos($table, 'ATTLOG') !== false || stripos($body, 'ATTLOG') !== false) {
+        $containsAttendanceRows = preg_match(
+            '/^[^\r\n\t]+\t\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/m',
+            $body
+        ) === 1;
+
+        if (stripos($table, 'ATTLOG') !== false || stripos($body, 'ATTLOG') !== false || $containsAttendanceRows) {
             $this->processAttendanceLogs($device, $body);
         }
 
@@ -186,12 +191,19 @@ class IclockController extends Controller
 
             $date    = $ts->toDateString();
             $time    = $ts->format('H:i:s');
-            $isLate  = $time > '08:00:00';
+            $statusForCheckIn = Attendance::statusForCheckIn($time);
 
-            $attendance = Attendance::firstOrNew([
-                'employee_id'     => $employee->id,
-                'attendance_date' => $date,
-            ]);
+            $attendance = Attendance::query()
+                ->where('employee_id', $employee->id)
+                ->whereDate('attendance_date', $date)
+                ->first();
+
+            if (! $attendance) {
+                $attendance = new Attendance([
+                    'employee_id'     => $employee->id,
+                    'attendance_date' => $date,
+                ]);
+            }
 
             if (! $attendance->exists) {
                 // Option 2: Check if first scan is checkout (status=1), mark it correctly
@@ -205,20 +217,27 @@ class IclockController extends Controller
                 } else {
                     $attendance->check_in_time  = $time;
                     $attendance->check_out_time = null;
-                    $attendance->status         = $isLate ? 'Late' : 'Present';
+                    $attendance->status         = $statusForCheckIn;
                 }
             } else {
-                if ($status === 1 || (! empty($attendance->check_in_time) && $time > $attendance->check_in_time)) {
-                    $attendance->check_out_time = $time;
+                if ($status === 1) {
+                    if (empty($attendance->check_out_time) || $time > $attendance->check_out_time) {
+                        $attendance->check_out_time = $time;
+                    }
                 } else {
-                    $attendance->check_in_time = $time;
-                    if ($attendance->status === 'Absent') {
-                        $attendance->status = $isLate ? 'Late' : 'Present';
+                    if (empty($attendance->check_in_time) || $time < $attendance->check_in_time) {
+                        $attendance->check_in_time = $time;
+                    }
+                    if ($attendance->status === 'Absent' || ! in_array($attendance->status, ['Leave', 'Overtime'], true)) {
+                        $attendance->status = $statusForCheckIn;
                     }
                 }
             }
 
             $attendance->source = $device->name;
+            if (! in_array($attendance->status, ['Absent', 'Leave', 'Overtime'], true) && $attendance->check_in_time) {
+                $attendance->status = Attendance::statusForCheckIn($attendance->check_in_time);
+            }
             if (! in_array($attendance->status, ['Absent', 'Leave'], true) && Attendance::isOvertimeCheckout($attendance->check_out_time)) {
                 $attendance->status = 'Overtime';
                 if (empty($attendance->overtime_approval_status)) {

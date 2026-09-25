@@ -161,6 +161,7 @@
         .report-table th {
             vertical-align: middle;
             font-size: .92rem;
+            white-space: nowrap;
         }
 
         .signoff {
@@ -212,6 +213,23 @@
 
             .no-print {
                 display: none !important;
+            }
+
+            .report-table {
+                border-collapse: collapse !important;
+            }
+
+            .report-table tbody tr {
+                height: 28px;
+            }
+
+            .report-table td,
+            .report-table th {
+                height: 28px;
+                padding: 4px 6px !important;
+                font-size: .8rem;
+                line-height: 1.15;
+                white-space: nowrap;
             }
 
             .section-bar,
