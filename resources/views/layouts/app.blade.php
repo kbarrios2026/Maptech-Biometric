@@ -754,9 +754,19 @@
             <div class="sidebar-inner">
                 <ul class="nav flex-column mb-0">
                     <li class="nav-item">
-                        <a class="nav-link @if(request()->routeIs('admin.dashboard')) active @endif" href="{{ route('admin.dashboard') }}">
-                            <i class="fas fa-gauge-high"></i><span class="nav-text">Dashboard</span>
-                        </a>
+                        @if(auth()->user()->hasRole('Employee'))
+                            <a class="nav-link @if(request()->routeIs('employee.attendance.index')) active @endif" href="{{ route('employee.attendance.index') }}">
+                                <i class="fas fa-clock"></i><span class="nav-text">My Attendance</span>
+                            </a>
+                        @elseif(auth()->user()->hasRole('HR Admin'))
+                            <a class="nav-link @if(request()->routeIs('admin.attendance.hr-admin')) active @endif" href="{{ route('admin.attendance.hr-admin') }}">
+                                <i class="fas fa-file-lines"></i><span class="nav-text">HR Admin DTR</span>
+                            </a>
+                        @else
+                            <a class="nav-link @if(request()->routeIs('admin.dashboard')) active @endif" href="{{ route('admin.dashboard') }}">
+                                <i class="fas fa-gauge-high"></i><span class="nav-text">Dashboard</span>
+                            </a>
+                        @endif
                     </li>
 
                     @if(auth()->user()->hasRole(['Super Admin', 'HR Admin']))
@@ -785,24 +795,28 @@
 
                     <hr class="sidebar-divider">
                     <div class="sidebar-section-label">Attendance</div>
+                    @if(auth()->user()->hasRole('Super Admin'))
                     <li class="nav-item">
                         <a class="nav-link @if(request()->routeIs('admin.attendance.index') || request()->routeIs('admin.attendance.store')) active @endif" href="{{ route('admin.attendance.index') }}">
                             <i class="fas fa-calendar-check"></i><span class="nav-text">Daily Attendance</span>
                         </a>
                     </li>
+                    @endif
                     <li class="nav-item">
                         <a class="nav-link @if(request()->routeIs('admin.attendance.hr-admin')) active @endif" href="{{ route('admin.attendance.hr-admin') }}">
                             <i class="fas fa-file-lines"></i><span class="nav-text">HR Admin DTR</span>
                         </a>
                     </li>
+                    @if(auth()->user()->hasRole('Super Admin'))
                     <li class="nav-item">
                         <a class="nav-link @if(request()->routeIs('admin.biometric-devices.*')) active @endif" href="{{ route('admin.biometric-devices.index') }}">
                             <i class="fas fa-fingerprint"></i><span class="nav-text">Biometric Devices</span>
                         </a>
                     </li>
                     @endif
+                    @endif
 
-                    @if(auth()->user()->hasRole(['Super Admin', 'HR Admin']))
+                    @if(auth()->user()->hasRole('Super Admin'))
                     <hr class="sidebar-divider">
                     <div class="sidebar-section-label">Company</div>
                     <li class="nav-item">
@@ -827,7 +841,7 @@
                     </li>
                     @endif
 
-                    @if(auth()->user()->hasRole(['Super Admin', 'HR Admin']))
+                    @if(auth()->user()->hasRole('Super Admin'))
                     <li class="nav-item">
                         <a class="nav-link @if(request()->routeIs('admin.activity-logs.*')) active @endif" href="{{ route('admin.activity-logs.index') }}">
                             <i class="fas fa-clock-rotate-left"></i><span class="nav-text">Activity Logs</span>

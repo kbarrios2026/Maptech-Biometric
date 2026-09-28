@@ -39,6 +39,16 @@ class LoginController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
+            $user = Auth::user();
+
+            if ($user && $user->hasRole('Employee')) {
+                return redirect()->intended(route('employee.attendance.index'));
+            }
+
+            if ($user && $user->hasRole('HR Admin')) {
+                return redirect()->route('admin.attendance.hr-admin');
+            }
+
             return redirect()->intended(route('admin.dashboard'));
         }
 

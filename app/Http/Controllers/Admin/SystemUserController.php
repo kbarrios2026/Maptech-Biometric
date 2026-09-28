@@ -114,6 +114,31 @@ class SystemUserController extends Controller
     }
 
     /**
+     * Set a new password for the specified system user.
+     */
+    public function updatePassword(Request $request, User $systemUser)
+    {
+        $validated = $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $systemUser->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        ActivityLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'reset_user_password',
+            'model' => 'User',
+            'model_id' => $systemUser->id,
+            'description' => "Reset password for system user: {$systemUser->email}",
+        ]);
+
+        return redirect()->route('admin.system-users.edit', $systemUser)
+            ->with('success', 'Password updated. The new password is ready to use.');
+    }
+
+    /**
      * Remove the specified system user.
      */
     public function destroy(User $systemUser)

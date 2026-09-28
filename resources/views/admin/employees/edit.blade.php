@@ -27,8 +27,8 @@
                 <div class="col-md-6"><label class="form-label">Last Name</label><input type="text" name="last_name" class="form-control" value="{{ old('last_name', $employee->last_name) }}" required></div>
                 <div class="col-md-6"><label class="form-label">Email</label><input type="email" name="email" class="form-control" value="{{ old('email', $employee->email) }}" required></div>
                 <div class="col-md-6"><label class="form-label">Phone</label><input type="text" name="phone" class="form-control" value="{{ old('phone', $employee->phone) }}"></div>
-                <div class="col-md-6"><label class="form-label">Department</label><select name="department_id" class="form-select"><option value="">Select Department</option>@foreach($departments as $department)<option value="{{ $department->id }}" @selected(old('department_id', $employee->department_id) == $department->id)>{{ $department->name }}</option>@endforeach</select></div>
-                <div class="col-md-6"><label class="form-label">Position</label><select name="position_id" class="form-select"><option value="">Select Position</option>@foreach($positions as $position)<option value="{{ $position->id }}" @selected(old('position_id', $employee->position_id) == $position->id)>{{ $position->name }}</option>@endforeach</select></div>
+                <div class="col-md-6"><label class="form-label">Department</label><select id="department_id" name="department_id" class="form-select"><option value="">Select Department</option>@foreach($departments as $department)<option value="{{ $department->id }}" @selected(old('department_id', $employee->department_id) == $department->id)>{{ $department->name }}</option>@endforeach</select></div>
+                <div class="col-md-6"><label class="form-label">Position</label><select id="position_id" name="position_id" class="form-select"><option value="">Select Position</option>@foreach($positions as $position)<option value="{{ $position->id }}" data-department-id="{{ $position->department_id }}" @selected(old('position_id', $employee->position_id) == $position->id)>{{ $position->name }}</option>@endforeach</select></div>
                 <div class="col-md-6"><label class="form-label">Date of Birth</label><input type="date" name="date_of_birth" class="form-control" value="{{ old('date_of_birth', optional($employee->date_of_birth)->format('Y-m-d')) }}"></div>
                 <div class="col-md-6"><label class="form-label">Joining Date</label><input type="date" name="joining_date" class="form-control" value="{{ old('joining_date', optional($employee->joining_date)->format('Y-m-d')) }}" required></div>
                 <div class="col-md-6"><label class="form-label">Gender</label><select name="gender" class="form-select"><option value="">Select Gender</option><option value="Male" @selected(old('gender', $employee->gender) === 'Male')>Male</option><option value="Female" @selected(old('gender', $employee->gender) === 'Female')>Female</option><option value="Other" @selected(old('gender', $employee->gender) === 'Other')>Other</option></select></div>
@@ -59,4 +59,8 @@
         </form>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+    @include('admin.employees.partials.department-position-filter')
 @endsection

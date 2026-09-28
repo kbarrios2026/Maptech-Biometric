@@ -16,6 +16,10 @@ class DashboardController extends Controller
      */
     public function index()
     {
+        if (auth()->user()->hasRole('HR Admin')) {
+            return redirect()->route('admin.attendance.hr-admin');
+        }
+
         $totalUsers = User::count();
         $totalEmployees = Employee::count();
         $totalDepartments = Department::count();

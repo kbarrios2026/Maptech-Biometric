@@ -16,9 +16,13 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return auth()->check()
-        ? redirect()->route('admin.dashboard')
-        : redirect()->route('login');
+    if (! auth()->check()) {
+        return redirect()->route('login');
+    }
+
+    return auth()->user()->hasRole('HR Admin')
+        ? redirect()->route('admin.attendance.hr-admin')
+        : redirect()->route('admin.dashboard');
 });
 
 // Device compatibility endpoints (non-/api paths used by some ZKTeco firmware)
@@ -47,6 +51,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
     Route::get('/change-password', [LoginController::class, 'showChangePasswordForm'])->name('change-password');
     Route::post('/change-password', [LoginController::class, 'changePassword'])->name('change-password.post');
+
+    Route::middleware('role:Employee')->prefix('employee')->name('employee.')->group(function () {
+        Route::get('/attendance', [\App\Http\Controllers\Employee\EmployeeAttendanceController::class, 'index'])->name('attendance.index');
+    });
 });
 
 // Admin Routes - Protected by 'auth' middleware and role checks
@@ -54,18 +62,25 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     // Dashboard - accessible to all authenticated users
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // System Users Management - Super Admin and HR Admin only
+    // People management - Super Admin and HR Admin only
     Route::middleware('role:Super Admin,HR Admin')->group(function () {
         Route::resource('system-users', SystemUserController::class);
+        Route::post('system-users/{systemUser}/password', [SystemUserController::class, 'updatePassword'])
+            ->name('system-users.password');
         Route::resource('departments', DepartmentController::class);
         Route::resource('positions', PositionController::class);
         Route::resource('employees', EmployeeController::class);
+
+        Route::get('attendance/hr-admin', [AttendanceController::class, 'hrAdmin'])->name('attendance.hr-admin');
+        Route::get('attendance/receipt', [AttendanceController::class, 'receipt'])->name('attendance.receipt');
+    });
+
+    // Quick attendance entry and changes are reserved for Super Admin.
+    Route::middleware('role:Super Admin')->group(function () {
         Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
         Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
         Route::post('attendance/status', [AttendanceController::class, 'updateStatus'])->name('attendance.status');
         Route::post('attendance/{attendance}/overtime-review', [AttendanceController::class, 'reviewOvertime'])->name('attendance.overtime-review');
-        Route::get('attendance/hr-admin', [AttendanceController::class, 'hrAdmin'])->name('attendance.hr-admin');
-        Route::get('attendance/receipt', [AttendanceController::class, 'receipt'])->name('attendance.receipt');
     });
 
     // Personnel management
@@ -76,7 +91,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     });
 
     // Biometric Devices
-    Route::middleware('role:Super Admin,HR Admin')->group(function () {
+    Route::middleware('role:Super Admin')->group(function () {
         Route::resource('biometric-devices', \App\Http\Controllers\Admin\BiometricDeviceController::class);
         Route::post('biometric-devices/{biometricDevice}/test-connection', [\App\Http\Controllers\Admin\BiometricDeviceController::class, 'testConnection'])->name('biometric-devices.test-connection');
         Route::post('biometric-devices/{biometricDevice}/sync', [\App\Http\Controllers\Admin\BiometricDeviceController::class, 'syncAttendance'])->name('biometric-devices.sync');
@@ -90,8 +105,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::resource('roles', RoleController::class);
     });
 
-    // Activity Logs - Super Admin and HR Admin only
-    Route::middleware('role:Super Admin,HR Admin')->group(function () {
+    // Activity logs, system settings, and company profile are Super Admin only.
+    Route::middleware('role:Super Admin')->group(function () {
         Route::resource('activity-logs', ActivityLogController::class, [
             'only' => ['index', 'show'],
         ]);

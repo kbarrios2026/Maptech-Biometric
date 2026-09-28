@@ -12,6 +12,7 @@ use App\Models\EmploymentType;
 use App\Models\EmployeeStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
 {
@@ -57,7 +58,12 @@ class EmployeeController extends Controller
             'gender' => 'nullable|in:Male,Female,Other',
             'address' => 'nullable|string',
             'department_id' => 'nullable|exists:departments,id',
-            'position_id' => 'nullable|exists:positions,id',
+            'position_id' => [
+                'nullable',
+                Rule::exists('positions', 'id')->where(
+                    fn ($query) => $query->where('department_id', $request->input('department_id'))
+                ),
+            ],
             'joining_date' => 'required|date',
             'employment_type_id' => 'nullable|exists:employment_types,id',
             'employee_status_id' => 'nullable|exists:employee_statuses,id',
@@ -141,7 +147,12 @@ class EmployeeController extends Controller
             'gender' => 'nullable|in:Male,Female,Other',
             'address' => 'nullable|string',
             'department_id' => 'nullable|exists:departments,id',
-            'position_id' => 'nullable|exists:positions,id',
+            'position_id' => [
+                'nullable',
+                Rule::exists('positions', 'id')->where(
+                    fn ($query) => $query->where('department_id', $request->input('department_id'))
+                ),
+            ],
             'joining_date' => 'required|date',
             'employment_type_id' => 'nullable|exists:employment_types,id',
             'employee_status_id' => 'nullable|exists:employee_statuses,id',

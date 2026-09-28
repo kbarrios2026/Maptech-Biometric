@@ -59,5 +59,38 @@
             </form>
         </div>
     </div>
+
+    <div class="card mt-4" id="reset-password">
+        <div class="card-header">
+            <i class="fas fa-key me-2"></i>Set a New Password
+        </div>
+        <div class="card-body">
+            <p class="text-muted">
+                Passwords cannot be viewed because they are stored securely as hashes. Set a new password here to restore login access.
+            </p>
+            <form method="POST" action="{{ route('admin.system-users.password', $systemUser) }}">
+                @csrf
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="password" class="form-label">New Password</label>
+                        <input type="password" class="form-control @error('password') is-invalid @enderror"
+                               id="password" name="password" minlength="8" autocomplete="new-password" required>
+                        @error('password')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    <div class="col-md-6">
+                        <label for="password_confirmation" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control"
+                               id="password_confirmation" name="password_confirmation" minlength="8"
+                               autocomplete="new-password" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-warning mt-3">
+                    <i class="fas fa-key"></i> Update Password
+                </button>
+            </form>
+        </div>
+    </div>
 </div>
 @endsection

@@ -6,7 +6,8 @@
 <style>
     .system-users-table {
         table-layout: fixed;
-        min-width: 760px;
+        width: 100%;
+        min-width: 820px;
         border-collapse: collapse;
         border-spacing: 0;
     }
@@ -17,12 +18,12 @@
     }
 
     .system-users-table th {
-        padding: 9px 12px;
+        padding: 12px 16px;
     }
 
     .system-users-table td {
-        padding: 1px 12px;
-        line-height: 16px;
+        padding: 7px 16px;
+        line-height: 20px;
     }
 
     .system-users-table td:nth-child(1),
@@ -33,27 +34,30 @@
 
     .system-users-table th:nth-child(1),
     .system-users-table td:nth-child(1) {
-        width: 17%;
+        width: 22%;
     }
 
     .system-users-table th:nth-child(2),
     .system-users-table td:nth-child(2) {
-        width: 37%;
+        width: 32%;
     }
 
     .system-users-table th:nth-child(3),
     .system-users-table td:nth-child(3) {
-        width: 20%;
+        width: 17%;
+        text-align: center;
     }
 
     .system-users-table th:nth-child(4),
     .system-users-table td:nth-child(4) {
-        width: 12%;
+        width: 13%;
+        text-align: center;
     }
 
     .system-users-table th:nth-child(5),
     .system-users-table td:nth-child(5) {
-        width: 14%;
+        width: 16%;
+        text-align: center;
     }
 
     .system-users-table .created-cell {
@@ -67,7 +71,8 @@
     .system-users-table .actions-group {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        justify-content: center;
+        gap: 6px;
     }
 
     .system-users-table .actions-group form {
@@ -128,6 +133,10 @@
                                 </a>
                                 <a href="{{ route('admin.system-users.edit', $user) }}" class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{{ route('admin.system-users.edit', $user) }}#reset-password"
+                                   class="btn btn-sm btn-secondary" title="Set password" aria-label="Set password for {{ $user->name }}">
+                                    <i class="fas fa-key"></i>
                                 </a>
                                 <form method="POST" action="{{ route('admin.system-users.destroy', $user) }}"
                                       onsubmit="return confirm('Are you sure?')">
