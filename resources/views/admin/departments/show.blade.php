@@ -11,7 +11,6 @@
 
     <div class="card p-4">
         <p><strong>Name:</strong> {{ $department->name }}</p>
-        <p><strong>Code:</strong> {{ $department->code ?? '-' }}</p>
         <p><strong>Status:</strong> {{ $department->is_active ? 'Active' : 'Inactive' }}</p>
         <p><strong>Description:</strong> {{ $department->description ?? '-' }}</p>
         <p><strong>Employees:</strong> {{ $department->employees()->count() }}</p>

@@ -3,6 +3,28 @@
 @section('title', "Dashboard - Maptech's Employee System")
 
 @section('content')
+<style>
+    .dashboard-stats .stat-card {
+        height: 100%;
+        min-height: 98px;
+    }
+
+    .dashboard-stats .stat-card > div:first-child {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .dashboard-stats .stat-label {
+        white-space: nowrap;
+        font-size: .7rem;
+        letter-spacing: .04em;
+    }
+
+    .dashboard-stats .stat-icon {
+        flex: 0 0 56px;
+    }
+</style>
+
 <div class="page-header">
     <div>
         <h1 class="page-title"><i class="fas fa-gauge-high"></i> Dashboard</h1>
@@ -11,7 +33,7 @@
 </div>
 
 <!-- Statistics Cards -->
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4 dashboard-stats">
     <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
             <div>

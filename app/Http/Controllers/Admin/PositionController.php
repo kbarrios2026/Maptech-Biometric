@@ -38,7 +38,6 @@ class PositionController extends Controller
             'name' => 'required|string|max:255|unique:positions,name',
             'department_id' => 'required|exists:departments,id',
             'description' => 'nullable|string',
-            'base_salary' => 'nullable|numeric|min:0',
             'is_active' => 'sometimes|boolean',
         ]);
 
@@ -46,7 +45,6 @@ class PositionController extends Controller
             'name' => $request->name,
             'department_id' => $request->department_id,
             'description' => $request->description,
-            'base_salary' => $request->base_salary,
             'is_active' => $request->boolean('is_active'),
         ]);
 
@@ -89,7 +87,6 @@ class PositionController extends Controller
             'name' => 'required|string|max:255|unique:positions,name,' . $position->id,
             'department_id' => 'required|exists:departments,id',
             'description' => 'nullable|string',
-            'base_salary' => 'nullable|numeric|min:0',
             'is_active' => 'sometimes|boolean',
         ]);
 
@@ -98,7 +95,6 @@ class PositionController extends Controller
             'name' => $request->name,
             'department_id' => $request->department_id,
             'description' => $request->description,
-            'base_salary' => $request->base_salary,
             'is_active' => $request->boolean('is_active'),
         ]);
 

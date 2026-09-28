@@ -21,7 +21,6 @@
                 <thead class="table-light">
                     <tr>
                         <th>Name</th>
-                        <th>Code</th>
                         <th>Status</th>
                         <th>Employees</th>
                         <th>Actions</th>
@@ -31,7 +30,6 @@
                     @forelse($departments as $department)
                     <tr>
                         <td><strong>{{ $department->name }}</strong></td>
-                        <td>{{ $department->code ?? '-' }}</td>
                         <td>
                             <span class="badge {{ $department->is_active ? 'bg-success' : 'bg-secondary' }}">
                                 {{ $department->is_active ? 'Active' : 'Inactive' }}
@@ -49,7 +47,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="5" class="text-center text-muted py-3">No departments found.</td></tr>
+                    <tr><td colspan="4" class="text-center text-muted py-3">No departments found.</td></tr>
                     @endforelse
                 </tbody>
             </table>

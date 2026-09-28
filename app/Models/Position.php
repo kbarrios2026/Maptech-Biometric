@@ -8,10 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Position extends Model
 {
-    protected $fillable = ['name', 'department_id', 'description', 'base_salary', 'is_active'];
+    protected $fillable = ['name', 'department_id', 'description', 'is_active'];
 
     protected $casts = [
-        'base_salary' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 

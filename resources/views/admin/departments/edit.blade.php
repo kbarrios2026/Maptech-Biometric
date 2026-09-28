@@ -18,10 +18,6 @@
                     <label class="form-label">Name</label>
                     <input type="text" name="name" class="form-control" value="{{ old('name', $department->name) }}" required>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Code</label>
-                    <input type="text" name="code" class="form-control" value="{{ old('code', $department->code) }}">
-                </div>
                 <div class="col-12">
                     <label class="form-label">Description</label>
                     <textarea name="description" class="form-control" rows="4">{{ old('description', $department->description) }}</textarea>

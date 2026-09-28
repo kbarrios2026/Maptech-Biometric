@@ -12,7 +12,6 @@
     <div class="card p-4">
         <p><strong>Name:</strong> {{ $position->name }}</p>
         <p><strong>Department:</strong> {{ $position->department?->name ?? '-' }}</p>
-        <p><strong>Base Salary:</strong> {{ $position->base_salary ? number_format($position->base_salary, 2) : '-' }}</p>
         <p><strong>Status:</strong> {{ $position->is_active ? 'Active' : 'Inactive' }}</p>
         <p><strong>Description:</strong> {{ $position->description ?? '-' }}</p>
         <p><strong>Employees:</strong> {{ $position->employees()->count() }}</p>

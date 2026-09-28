@@ -16,7 +16,6 @@
                     <tr>
                         <th>Name</th>
                         <th>Department</th>
-                        <th>Base Salary</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -26,7 +25,6 @@
                     <tr>
                         <td><strong>{{ $position->name }}</strong></td>
                         <td>{{ $position->department?->name ?? '-' }}</td>
-                        <td>{{ $position->base_salary ? number_format($position->base_salary, 2) : '-' }}</td>
                         <td><span class="badge {{ $position->is_active ? 'bg-success' : 'bg-secondary' }}">{{ $position->is_active ? 'Active' : 'Inactive' }}</span></td>
                         <td>
                             <a href="{{ route('admin.positions.show', $position) }}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
@@ -39,7 +37,7 @@
                         </td>
                     </tr>
                     @empty
-                    <tr><td colspan="5" class="text-center text-muted py-3">No positions found.</td></tr>
+                    <tr><td colspan="4" class="text-center text-muted py-3">No positions found.</td></tr>
                     @endforelse
                 </tbody>
             </table>

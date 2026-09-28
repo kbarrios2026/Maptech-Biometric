@@ -26,10 +26,6 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Base Salary</label>
-                    <input type="number" step="0.01" min="0" name="base_salary" class="form-control" value="{{ old('base_salary', $position->base_salary) }}">
-                </div>
                 <div class="col-12">
                     <label class="form-label">Description</label>
                     <textarea name="description" class="form-control" rows="4">{{ old('description', $position->description) }}</textarea>

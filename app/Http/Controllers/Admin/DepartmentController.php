@@ -34,14 +34,12 @@ class DepartmentController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:departments,name',
-            'code' => 'nullable|string|max:50|unique:departments,code',
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
         ]);
 
         $department = Department::create([
             'name' => $request->name,
-            'code' => $request->code,
             'description' => $request->description,
             'is_active' => $request->boolean('is_active'),
         ]);
@@ -82,7 +80,6 @@ class DepartmentController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:departments,name,' . $department->id,
-            'code' => 'nullable|string|max:50|unique:departments,code,' . $department->id,
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
         ]);
@@ -90,7 +87,6 @@ class DepartmentController extends Controller
         $oldValues = $department->toArray();
         $department->update([
             'name' => $request->name,
-            'code' => $request->code,
             'description' => $request->description,
             'is_active' => $request->boolean('is_active'),
         ]);
