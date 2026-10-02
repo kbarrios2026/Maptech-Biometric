@@ -7,15 +7,11 @@ use App\Models\Attendance;
 use App\Models\BiometricDevice;
 use App\Models\Employee;
 use App\Models\EmployeeDevice;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 use Illuminate\Database\UniqueConstraintViolationException;
 
 /**
@@ -38,14 +34,15 @@ class IclockController extends Controller
 
         Log::info("ADMS: Device registration from SN={$sn}", $request->query());
 
-        // Find or auto-register device by serial number
-        $device = BiometricDevice::query()->where('serial_number', $sn)->first();
-        if (! $device) {
-            $device = BiometricDevice::query()->where('is_active', true)->first();
-        }
+        $device = $sn !== ''
+            ? BiometricDevice::query()
+                ->where('serial_number', $sn)
+                ->where('is_active', true)
+                ->first()
+            : null;
 
-        if ($device && $device->serial_number !== $sn && $sn) {
-            $device->forceFill(['serial_number' => $sn])->save();
+        if (! $device && $sn !== '') {
+            Log::warning("ADMS: Registration request from unknown or inactive serial number SN={$sn}");
         }
 
         $body = implode("\r\n", [
@@ -78,11 +75,15 @@ class IclockController extends Controller
             'body_excerpt' => substr($request->getContent(), 0, 500),
         ]);
 
-        $device = BiometricDevice::query()->where('serial_number', $sn)->first()
-            ?? BiometricDevice::query()->where('is_active', true)->first();
+        $device = $sn !== ''
+            ? BiometricDevice::query()
+                ->where('serial_number', $sn)
+                ->where('is_active', true)
+                ->first()
+            : null;
 
         if (! $device) {
-            Log::warning("ADMS: No active device found for SN={$sn}");
+            Log::warning("ADMS: Ignoring data push from unknown or inactive serial number SN={$sn}");
             return response("OK\n", 200)->header('Content-Type', 'text/plain');
         }
 
@@ -119,9 +120,32 @@ class IclockController extends Controller
     {
         $sn = $request->query('SN', $request->query('sn', ''));
 
-        if ($sn && Cache::add("zkteco.query-attlog.{$sn}", true, now()->addMinutes(10))) {
-            $start = now()->startOfMonth()->format('Y-m-d H:i:s');
-            $end = now()->endOfDay()->format('Y-m-d H:i:s');
+        $device = $sn !== ''
+            ? BiometricDevice::query()
+                ->where('serial_number', $sn)
+                ->where('is_active', true)
+                ->first()
+            : null;
+
+        if (! $device) {
+            if ($sn !== '') {
+                Log::warning("ADMS: Ignoring command poll from unknown or inactive serial number SN={$sn}");
+            }
+
+            return response("OK\n", 200)->header('Content-Type', 'text/plain');
+        }
+
+        $replay = Cache::pull("zkteco.attlog-replay.{$sn}");
+        if (is_array($replay) && isset($replay['from'], $replay['to'])) {
+            Log::info("ADMS: Sending requested attendance replay to device {$device->name} for {$replay['from']} through {$replay['to']}.");
+
+            return response("C:DATA QUERY ATTLOG StartTime={$replay['from']} 00:00:00 EndTime={$replay['to']} 23:59:59\r\n", 200)
+                ->header('Content-Type', 'text/plain');
+        }
+
+        if (Cache::add("zkteco.query-attlog.{$sn}", true, now()->addMinutes(10))) {
+            $start = now()->subDays(7)->startOfDay()->format('Y-m-d H:i:s');
+            $end = now()->format('Y-m-d H:i:s');
 
             return response("C:DATA QUERY ATTLOG StartTime={$start} EndTime={$end}\r\n", 200)
                 ->header('Content-Type', 'text/plain');
@@ -253,8 +277,44 @@ class IclockController extends Controller
             }
             try {
                 $attendance->save();
-            } catch (UniqueConstraintViolationException) {
-                Log::debug("ADMS: Ignored duplicate attendance for employee {$employee->id} on {$date}.");
+            } catch (UniqueConstraintViolationException $exception) {
+                $attendance = Attendance::query()
+                    ->where('employee_id', $employee->id)
+                    ->whereDate('attendance_date', $date)
+                    ->first();
+
+                if (! $attendance) {
+                    throw $exception;
+                }
+
+                if ($status === 1) {
+                    if (empty($attendance->check_out_time) || $time > $attendance->check_out_time) {
+                        $attendance->check_out_time = $time;
+                    }
+                } elseif (empty($attendance->check_in_time) || $time < $attendance->check_in_time) {
+                    $attendance->check_in_time = $time;
+                }
+
+                $attendance->source = $device->name;
+                if (! in_array($attendance->status, ['Absent', 'Leave', 'Overtime'], true) && $attendance->check_in_time) {
+                    $attendance->status = Attendance::statusForCheckIn($attendance->check_in_time);
+                }
+                if (
+                    ! in_array($attendance->status, ['Absent', 'Leave'], true)
+                    && $attendance->overtime_approval_status !== 'Rejected'
+                    && Attendance::isOvertimeCheckout($attendance->check_out_time)
+                ) {
+                    $attendance->status = 'Overtime';
+                    if (empty($attendance->overtime_approval_status)) {
+                        $attendance->overtime_approval_status = 'Pending';
+                    }
+                    if (empty($attendance->overtime_reason)) {
+                        $attendance->overtime_reason = 'Auto-detected from checkout time.';
+                    }
+                }
+
+                $attendance->save();
+                Log::debug("ADMS: Merged concurrent attendance scan for employee {$employee->id} on {$date}.");
             }
             $processed++;
         }
@@ -277,16 +337,12 @@ class IclockController extends Controller
             }
 
             $pin = null;
-            $name = null;
-
-            if (preg_match('/^USER\s+PIN=(\S+)\s+Name=(.*?)\s+Pri=/i', $line, $matches)) {
+            if (preg_match('/^USER\s+PIN=(\S+)\s+Name=.*?\s+Pri=/i', $line, $matches)) {
                 $pin = trim($matches[1]);
-                $name = trim($matches[2]);
             } else {
                 $parts = preg_split('/\t+/', $line);
-                if (count($parts) >= 2) {
+                if (count($parts) >= 1) {
                     $pin = trim($parts[0]);
-                    $name = trim($parts[1]);
                 }
             }
 
@@ -301,7 +357,8 @@ class IclockController extends Controller
             }
 
             if (! $employee) {
-                $employee = $this->autoCreateEmployeeFromPin($pin, $device, $name ?: null);
+                Log::warning("ADMS: Skipping unassigned enrollment PIN={$pin}.");
+                continue;
             } elseif (empty($employee->biometric_id)) {
                 $employee->forceFill(['biometric_id' => $pin])->save();
             }
@@ -309,7 +366,7 @@ class IclockController extends Controller
             EmployeeDevice::updateOrCreate(
                 ['device_identifier' => $pin],
                 [
-                    'employee_id' => $employee?->id,
+                    'employee_id' => $employee->id,
                     'device_name' => $device->name,
                     'is_primary' => true,
                 ]
@@ -326,108 +383,16 @@ class IclockController extends Controller
      */
     private function resolveEmployee(string $pin, BiometricDevice $device): ?Employee
     {
-        return Employee::query()->where('biometric_id', $pin)->first()
+        $employee = Employee::query()->where('biometric_id', $pin)->first()
             ?? Employee::query()->where('employee_id', $pin)->first()
             ?? optional(
                 EmployeeDevice::query()->where('device_identifier', $pin)->with('employee')->first()
-            )->employee
-            ?? $this->autoCreateEmployeeFromPin($pin, $device);
-    }
+            )->employee;
 
-    private function autoCreateEmployeeFromPin(string $pin, BiometricDevice $device, ?string $deviceName = null): ?Employee
-    {
-        if ($pin === '') {
-            return null;
+        if (! $employee) {
+            Log::warning("ADMS: Skipping attendance for unassigned PIN={$pin} on device {$device->name}.");
         }
 
-        try {
-            return DB::transaction(function () use ($pin, $device): Employee {
-                $existing = Employee::withTrashed()->where('biometric_id', $pin)->first();
-                if ($existing) {
-                    if ($existing->trashed()) {
-                        $existing->restore();
-                    }
-
-                    return $existing;
-                }
-
-                $hash = substr(sha1($pin), 0, 12);
-                $userEmail = "auto.user.{$hash}@maptech.local";
-                $employeeEmail = "auto.employee.{$hash}@maptech.local";
-                $emailSuffix = 1;
-
-                while (Employee::withTrashed()->where('email', $employeeEmail)->exists()) {
-                    $employeeEmail = "auto.employee.{$hash}-{$emailSuffix}@maptech.local";
-                    $emailSuffix++;
-                }
-
-                $user = User::query()->firstOrCreate(
-                    ['email' => $userEmail],
-                    [
-                        'name' => "Auto User {$pin}",
-                        'password' => Hash::make(Str::random(32)),
-                    ]
-                );
-
-                $nameParts = preg_split('/\s+/', trim($deviceName ?? '')) ?: [];
-                $firstName = $nameParts[0] ?? 'Auto';
-                $lastName = count($nameParts) > 1
-                    ? implode(' ', array_slice($nameParts, 1))
-                    : "User {$pin}";
-
-                $employee = Employee::query()->create([
-                    'user_id' => $user->id,
-                    'employee_id' => $this->generateUniqueEmployeeCode($pin),
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
-                    'email' => $employeeEmail,
-                    'joining_date' => now()->toDateString(),
-                    'employment_status' => 'Active',
-                    'biometric_id' => $pin,
-                    'is_active' => true,
-                ]);
-
-                EmployeeDevice::query()->firstOrCreate(
-                    ['device_identifier' => $pin],
-                    [
-                        'employee_id' => $employee->id,
-                        'device_name' => $device->name,
-                        'is_primary' => true,
-                    ]
-                );
-
-                Log::info('ADMS: Auto-created employee from unknown PIN.', [
-                    'pin' => $pin,
-                    'employee_id' => $employee->id,
-                    'device_id' => $device->id,
-                ]);
-
-                return $employee;
-            });
-        } catch (\Throwable $e) {
-            Log::error('ADMS: Failed auto-creating employee from unknown PIN.', [
-                'pin' => $pin,
-                'device_id' => $device->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return null;
-        }
-    }
-
-    private function generateUniqueEmployeeCode(string $identifier): string
-    {
-        $clean = preg_replace('/[^A-Za-z0-9]/', '', $identifier) ?: 'AUTO';
-        $base = 'AUTO-'.$clean;
-        $candidate = Str::upper(substr($base, 0, 24));
-        $suffix = 1;
-
-        while (Employee::withTrashed()->where('employee_id', $candidate)->exists()) {
-            $tail = '-'.$suffix;
-            $candidate = Str::upper(substr($base, 0, 24 - strlen($tail))).$tail;
-            $suffix++;
-        }
-
-        return $candidate;
+        return $employee;
     }
 }

@@ -68,6 +68,23 @@ Once configured, fingerprint scans should:
 1. Be recorded on the device immediately
 2. Be sent to server within 15-60 seconds
 3. Appear in the web dashboard at http://192.168.50.132:8000/admin/biometric-devices/1
+4. Appear in the HR Admin attendance report, which refreshes every 30 seconds
+
+When the device polls the server for commands, it is also asked to resend attendance logs from the previous seven days. For an older one-month period, queue a one-time replay from the project directory:
+
+```powershell
+php artisan biometric:replay-attendance 1 2026-07-01 2026-07-31
+```
+
+Replace `1` with the active push-mode device ID and use the required date range. The request is delivered on that device's next poll and expires after one day. The device must retain the logs and be able to reach the server. The command requests no more than 31 days at a time and does not clear device logs.
+
+For a device on the LAN, Laravel must listen on a LAN-reachable interface, and the configured server address must be the computer's current LAN IP (not `127.0.0.1` or `localhost`). For local development, start the server with:
+
+```powershell
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+Only expose the development server on a trusted network and allow the port through the firewall only as required.
 
 ---
 

@@ -14,6 +14,7 @@
                 @else
                     - All Employees
                 @endif
+                <span class="d-block small">Live updates refresh every 30 seconds.</span>
             </div>
         </div>
         <div class="col-12 col-xl-8 mt-0">
@@ -175,6 +176,46 @@
         </div>
     </div>
 
+    <section class="card mb-4 attendance-calendar" aria-labelledby="attendance-calendar-heading">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 id="attendance-calendar-heading" class="h5 mb-0">Daily Attendance Calendar</h2>
+            <span class="text-muted small">Shows saved attendance only. Missing dates are not marked absent or added to the database.</span>
+        </div>
+        <div class="card-body">
+            <div class="attendance-calendar-grid">
+                @foreach(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $weekday)
+                    <div class="attendance-calendar-weekday">{{ $weekday }}</div>
+                @endforeach
+
+                @for($blankDay = 0; $blankDay < $calendarLeadingDays; $blankDay++)
+                    <div class="attendance-calendar-day attendance-calendar-day-empty" aria-hidden="true"></div>
+                @endfor
+
+                @foreach($calendarDays as $calendarDay)
+                    <article class="attendance-calendar-day {{ $calendarDay['total'] === 0 ? 'attendance-calendar-day-no-records' : '' }}"
+                             aria-label="{{ $calendarDay['date']->format('l, F j, Y') }}: {{ $calendarDay['total'] }} saved attendance {{ \Illuminate\Support\Str::plural('record', $calendarDay['total']) }}">
+                        <div class="attendance-calendar-date">
+                            <span>{{ $calendarDay['date']->format('j') }}</span>
+                            <small>{{ $calendarDay['date']->format('M') }}</small>
+                        </div>
+                        @if($calendarDay['total'] > 0)
+                            <div class="attendance-calendar-total">{{ $calendarDay['total'] }} {{ \Illuminate\Support\Str::plural('record', $calendarDay['total']) }}</div>
+                            <div class="attendance-calendar-statuses">
+                                @foreach(['present' => 'Present', 'late' => 'Late', 'overtime' => 'OT', 'leave' => 'Leave', 'absent' => 'Absent', 'other' => 'Other'] as $statusKey => $statusLabel)
+                                    @if($calendarDay[$statusKey] > 0)
+                                        <span>{{ $statusLabel }}: {{ $calendarDay[$statusKey] }}</span>
+                                    @endif
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="attendance-calendar-no-records">No saved records</div>
+                        @endif
+                    </article>
+                @endforeach
+            </div>
+        </div>
+    </section>
+
     <div class="card">
         <div class="table-responsive">
             <table class="table table-hover mb-0 align-middle hr-attendance-table">
@@ -192,7 +233,11 @@
                 </thead>
                 <tbody>
                     @forelse($attendances as $attendance)
-                        <tr class="{{ $attendance->status === 'Overtime' ? 'ot-row' : '' }}">
+                        <tr
+                            class="{{ $attendance->status === 'Overtime' ? 'ot-row' : '' }}"
+                            id="attendance-{{ $attendance->id }}"
+                            data-attendance-id="{{ $attendance->id }}"
+                        >
                             <td>
                                 <strong class="employee-name">{{ $attendance->employee?->full_name ?? 'Unknown' }}</strong>
                                 <small class="text-muted employee-id">{{ $attendance->employee?->employee_id ?? '-' }}</small>
@@ -446,6 +491,75 @@
         min-height: 96px;
     }
 
+    .attendance-calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .attendance-calendar-weekday {
+        padding: 4px 8px;
+        color: #64748b;
+        font-size: .76rem;
+        font-weight: 700;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .attendance-calendar-day {
+        min-height: 112px;
+        padding: 9px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .attendance-calendar-day-empty {
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+    }
+
+    .attendance-calendar-day-no-records {
+        background: #f8fafc;
+    }
+
+    .attendance-calendar-date {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-weight: 700;
+    }
+
+    .attendance-calendar-date small {
+        color: #64748b;
+        font-size: .7rem;
+        font-weight: 500;
+    }
+
+    .attendance-calendar-total {
+        margin-top: 8px;
+        font-size: .78rem;
+        font-weight: 700;
+    }
+
+    .attendance-calendar-statuses {
+        display: grid;
+        gap: 2px;
+        margin-top: 4px;
+        color: #475569;
+        font-size: .7rem;
+        line-height: 1.3;
+    }
+
+    .attendance-calendar-no-records {
+        margin-top: 12px;
+        color: #64748b;
+        font-size: .74rem;
+        line-height: 1.3;
+    }
+
     .hr-attendance-table thead th {
         font-size: .78rem;
         text-transform: uppercase;
@@ -628,6 +742,19 @@
     }
 
     @media (max-width: 768px) {
+        .attendance-calendar-grid {
+            gap: 4px;
+        }
+
+        .attendance-calendar-day {
+            min-height: 92px;
+            padding: 5px;
+        }
+
+        .attendance-calendar-statuses {
+            font-size: .62rem;
+        }
+
         .status-cell {
             min-width: 160px;
         }
@@ -674,6 +801,22 @@
     body.dark-mode .report-block {
         border-color: #334155;
         background: #0f172a;
+    }
+
+    body.dark-mode .attendance-calendar-day {
+        border-color: #334155;
+        background: #0f172a;
+    }
+
+    body.dark-mode .attendance-calendar-day-no-records {
+        background: #192238;
+    }
+
+    body.dark-mode .attendance-calendar-weekday,
+    body.dark-mode .attendance-calendar-date small,
+    body.dark-mode .attendance-calendar-statuses,
+    body.dark-mode .attendance-calendar-no-records {
+        color: #b7c6da;
     }
 
     body.dark-mode .report-label {
@@ -833,5 +976,14 @@
         const isExpanded = !reason.classList.contains('d-none');
         toggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
     });
+
+    window.setInterval(function () {
+        const activeElement = document.activeElement;
+        const editingForm = activeElement instanceof HTMLElement && activeElement.closest('form');
+
+        if (document.visibilityState === 'visible' && !editingForm) {
+            window.location.reload();
+        }
+    }, 30000);
 </script>
 @endsection

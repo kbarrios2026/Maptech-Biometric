@@ -45,11 +45,11 @@ class ZktecoAttendanceService
             }
 
             if (! $attendance->exists) {
-                $attendance->check_in_time = $time;
-                $attendance->check_out_time = null;
-                $attendance->status = $status;
+                $attendance->check_in_time = $isCheckout ? null : $time;
+                $attendance->check_out_time = $isCheckout ? $time : null;
+                $attendance->status = $isCheckout ? 'Present' : $status;
             } else {
-                if (empty($attendance->check_in_time) || $time < $attendance->check_in_time) {
+                if (! $isCheckout && (empty($attendance->check_in_time) || $time < $attendance->check_in_time)) {
                     $attendance->check_in_time = $time;
                 }
 

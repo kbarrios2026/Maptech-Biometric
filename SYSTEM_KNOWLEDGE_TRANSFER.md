@@ -94,11 +94,14 @@ The system supports both the ZKTeco ADMS/PUSH flow and a legacy token webhook. P
 
 1. A device calls `GET /iclock/cdata` to receive settings such as real-time transfer and timezone.
 2. It sends tab-separated attendance records to `POST /iclock/cdata`.
-3. Device PINs are matched to an employee by biometric ID, employee ID, or employee-device mapping.
-4. Attendance is consolidated into one record per employee per date. Earliest check-in and latest checkout are retained.
-5. Device users may be imported from enrollment records.
-6. The server responds with plain-text `OK`.
-7. The device polls `GET /iclock/getrequest` for pending attendance queries and posts command results to `/iclock/devicecmd`.
+3. The serial number must match an active registered biometric device; an unknown serial is not allowed to claim or send data to another device's record.
+4. Device PINs are matched to an employee by biometric ID, employee ID, or employee-device mapping.
+5. Attendance is consolidated into one record per employee per date. Earliest check-in and latest checkout are retained, including when multiple scans arrive together.
+6. Device users may be imported from enrollment records.
+7. The server responds with plain-text `OK`.
+8. The device polls `GET /iclock/getrequest` for pending attendance queries and posts command results to `/iclock/devicecmd`.
+
+The regular ADMS replay asks for the preceding seven days. To request a historical period of up to 31 days from an active push-mode device, use `php artisan biometric:replay-attendance {device-id} {YYYY-MM-DD} {YYYY-MM-DD}`. The one-time request is returned to the device at its next poll; the device must retain the punches and be able to reach the server. See [SETUP_ZKTECO_PUSH.md](SETUP_ZKTECO_PUSH.md) for LAN server binding and an example.
 
 `POST /zkteco/webhook/{deviceToken}` accepts the legacy JSON webhook format. The token must identify an active device. The service parses common employee identifier and timestamp fields and processes each valid record.
 

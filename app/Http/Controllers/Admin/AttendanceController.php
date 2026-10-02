@@ -50,6 +50,34 @@ class AttendanceController extends Controller
         }
 
         $recordedAttendances = $query->get();
+        $calendarAttendanceByDate = $recordedAttendances->groupBy(
+            fn (Attendance $attendance) => $attendance->attendance_date->toDateString()
+        );
+        $calendarDays = collect();
+        $calendarDate = Carbon::parse($dateFrom)->startOfDay();
+        $calendarEndDate = Carbon::parse($dateTo)->startOfDay();
+
+        for (; $calendarDate->lte($calendarEndDate); $calendarDate->addDay()) {
+            $dayAttendances = $calendarAttendanceByDate->get($calendarDate->toDateString(), collect());
+            $present = $dayAttendances->where('status', 'Present')->count();
+            $late = $dayAttendances->where('status', 'Late')->count();
+            $overtime = $dayAttendances->where('status', 'Overtime')->count();
+            $leave = $dayAttendances->where('status', 'Leave')->count();
+            $absent = $dayAttendances->where('status', 'Absent')->count();
+
+            $calendarDays->push([
+                'date' => $calendarDate->copy(),
+                'total' => $dayAttendances->count(),
+                'present' => $present,
+                'late' => $late,
+                'overtime' => $overtime,
+                'leave' => $leave,
+                'absent' => $absent,
+                'other' => $dayAttendances->count() - $present - $late - $overtime - $leave - $absent,
+            ]);
+        }
+        $calendarLeadingDays = (int) Carbon::parse($dateFrom)->dayOfWeek;
+
         $attendances = $this->buildHrDtrRows(
             $recordedAttendances,
             $employees,
@@ -88,6 +116,8 @@ class AttendanceController extends Controller
             'employeeId',
             'status',
             'selectedEmployee',
+            'calendarDays',
+            'calendarLeadingDays',
             'totalCount',
             'presentCount',
             'lateCount',
@@ -331,7 +361,9 @@ class AttendanceController extends Controller
     public function reviewOvertime(Request $request, Attendance $attendance)
     {
         if ($attendance->status !== 'Overtime') {
-            return back()->with('error', 'Only overtime records can be reviewed.');
+            return back()
+                ->withFragment('attendance-'.$attendance->id)
+                ->with('error', 'Only overtime records can be reviewed.');
         }
 
         $data = $request->validate([
@@ -360,6 +392,8 @@ class AttendanceController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Overtime review saved.');
+        return back()
+            ->withFragment('attendance-'.$attendance->id)
+            ->with('success', 'Overtime review saved.');
     }
 }
