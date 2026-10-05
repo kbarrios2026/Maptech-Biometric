@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
+use App\Models\BiometricDevice;
 use App\Models\Employee;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\UniqueConstraintViolationException;
 
@@ -30,6 +32,8 @@ class AttendanceController extends Controller
 
     public function hrAdmin(Request $request)
     {
+        $this->queueLatestAttendanceReplay();
+
         $dateFrom = $request->get('date_from', now()->startOfMonth()->toDateString());
         $dateTo = $request->get('date_to', now()->toDateString());
         $dateTo = min(Carbon::parse($dateTo)->toDateString(), Carbon::today()->toDateString());
@@ -59,7 +63,7 @@ class AttendanceController extends Controller
 
         for (; $calendarDate->lte($calendarEndDate); $calendarDate->addDay()) {
             $dayAttendances = $calendarAttendanceByDate->get($calendarDate->toDateString(), collect());
-            $present = $dayAttendances->where('status', 'Present')->count();
+            $present = $dayAttendances->whereIn('status', ['Present', 'Half Day'])->count();
             $late = $dayAttendances->where('status', 'Late')->count();
             $overtime = $dayAttendances->where('status', 'Overtime')->count();
             $leave = $dayAttendances->where('status', 'Leave')->count();
@@ -86,14 +90,14 @@ class AttendanceController extends Controller
             $employeeId
         );
 
-        if (in_array($status, ['Absent', 'Leave'], true)) {
+        if (in_array($status, ['Present', 'Late', 'Overtime', 'Absent', 'Leave', 'Half Day'], true)) {
             $attendances = $attendances->where('status', $status)->values();
         } else {
             $status = '';
         }
 
         $totalCount = $attendances->count();
-        $presentCount = $attendances->where('status', 'Present')->count();
+        $presentCount = $attendances->whereIn('status', ['Present', 'Half Day'])->count();
         $lateCount = $attendances->where('status', 'Late')->count();
         $overtimeCount = $attendances->where('status', 'Overtime')->count();
         $leaveCount = $attendances->where('status', 'Leave')->count();
@@ -128,57 +132,46 @@ class AttendanceController extends Controller
         ));
     }
 
-    /**
-     * Add weekday DTR rows for active employees without a recorded attendance entry.
-     *
-     * Employees marked "On Leave" receive Leave rows; other eligible employees
-     * receive Absent rows. Existing records always take precedence.
-     */
-    private function buildHrDtrRows($recordedAttendances, $employees, Carbon $dateFrom, Carbon $dateTo, $employeeId)
+    private function queueLatestAttendanceReplay(): void
     {
-        $rows = $recordedAttendances->keyBy(
-            fn (Attendance $attendance) => $attendance->employee_id . '|' . $attendance->attendance_date->toDateString()
-        );
+        $devices = BiometricDevice::query()
+            ->where('is_active', true)
+            ->where('sync_mode', 'push')
+            ->whereNotNull('serial_number')
+            ->get();
 
-        $eligibleEmployees = $employees->filter(function (Employee $employee) use ($employeeId) {
-            if ($employeeId && (string) $employee->id !== (string) $employeeId) {
-                return false;
-            }
-
-            return $employee->is_active
-                && in_array($employee->employment_status, ['Active', 'On Leave'], true);
-        });
-
-        for ($date = $dateFrom->copy()->startOfDay(); $date->lte($dateTo); $date->addDay()) {
-            if ($date->isWeekend()) {
+        foreach ($devices as $device) {
+            $throttleKey = "zkteco.attlog-auto-refresh.{$device->serial_number}";
+            if (! Cache::add($throttleKey, true, now()->addMinutes(10))) {
                 continue;
             }
 
-            foreach ($eligibleEmployees as $employee) {
-                if ($employee->joining_date && $employee->joining_date->gt($date)) {
-                    continue;
-                }
-
-                $key = $employee->id . '|' . $date->toDateString();
-                if ($rows->has($key)) {
-                    continue;
-                }
-
-                $attendance = new Attendance([
-                    'employee_id' => $employee->id,
-                    'attendance_date' => $date->toDateString(),
-                    'status' => $employee->employment_status === 'On Leave' ? 'Leave' : 'Absent',
-                    'source' => 'DTR status',
-                ]);
-                $attendance->setRelation('employee', $employee);
-                $rows->put($key, $attendance);
-            }
+            Cache::put(
+                "zkteco.attlog-replay.{$device->serial_number}",
+                [
+                    'from' => now()->subDays(7)->toDateString(),
+                    'to' => now()->toDateString(),
+                ],
+                now()->addDay()
+            );
         }
+    }
 
-        return $rows->sort(function (Attendance $left, Attendance $right) {
-            return $right->attendance_date <=> $left->attendance_date
-                ?: strcmp((string) $right->check_in_time, (string) $left->check_in_time);
-        })->values();
+    /**
+     * Return only actual attendance rows recorded in the database.
+     *
+     * Missing dates are displayed as empty calendar slots and are not added as
+     * synthetic Absent/Leave rows.
+     */
+    private function buildHrDtrRows($recordedAttendances, $employees, Carbon $dateFrom, Carbon $dateTo, $employeeId)
+    {
+        return $recordedAttendances
+            ->when($employeeId, fn ($collection) => $collection->where('employee_id', $employeeId))
+            ->sort(function (Attendance $left, Attendance $right) {
+                return $right->attendance_date <=> $left->attendance_date
+                    ?: strcmp((string) $right->check_in_time, (string) $left->check_in_time);
+            })
+            ->values();
     }
 
     public function receipt(Request $request)

@@ -101,7 +101,7 @@ The system supports both the ZKTeco ADMS/PUSH flow and a legacy token webhook. P
 7. The server responds with plain-text `OK`.
 8. The device polls `GET /iclock/getrequest` for pending attendance queries and posts command results to `/iclock/devicecmd`.
 
-The regular ADMS replay asks for the preceding seven days. To request a historical period of up to 31 days from an active push-mode device, use `php artisan biometric:replay-attendance {device-id} {YYYY-MM-DD} {YYYY-MM-DD}`. The one-time request is returned to the device at its next poll; the device must retain the punches and be able to reach the server. See [SETUP_ZKTECO_PUSH.md](SETUP_ZKTECO_PUSH.md) for LAN server binding and an example.
+Opening the HR Admin DTR queues a replay request for the preceding seven days from each active push-mode device. Requests are rate-limited to once every ten minutes per device and are delivered at the device's next poll; the device must retain the punches and be able to reach the server. The DTR refreshes in the browser every 30 seconds, but a device that is offline cannot deliver new records. To request a historical period of up to 31 days from an active push-mode device, use `php artisan biometric:replay-attendance {device-id} {YYYY-MM-DD} {YYYY-MM-DD}`. See [SETUP_ZKTECO_PUSH.md](SETUP_ZKTECO_PUSH.md) for LAN server binding and an example.
 
 `POST /zkteco/webhook/{deviceToken}` accepts the legacy JSON webhook format. The token must identify an active device. The service parses common employee identifier and timestamp fields and processes each valid record.
 

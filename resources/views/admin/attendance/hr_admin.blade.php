@@ -14,7 +14,7 @@
                 @else
                     - All Employees
                 @endif
-                <span class="d-block small">Live updates refresh every 30 seconds.</span>
+                <span class="d-block small">Live updates refresh every 30 seconds. Opening this report requests the latest 7 days from connected biometric devices.</span>
             </div>
         </div>
         <div class="col-12 col-xl-8 mt-0">
@@ -32,6 +32,9 @@
                     </select>
                     <select name="status" class="form-select">
                         <option value="" @selected($status === '')>All Statuses</option>
+                        <option value="Present" @selected($status === 'Present')>Present</option>
+                        <option value="Late" @selected($status === 'Late')>Late</option>
+                        <option value="Half Day" @selected($status === 'Half Day')>Half Day</option>
                         <option value="Absent" @selected($status === 'Absent')>Absent</option>
                         <option value="Leave" @selected($status === 'Leave')>On Leave</option>
                     </select>
