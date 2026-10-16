@@ -28,7 +28,7 @@ If Composer is not installed globally but `composer.phar` is present in the proj
 For local development, run these in separate terminals:
 
 ```powershell
-php artisan serve --host=127.0.0.1 --port=8000
+php artisan serve --host=0.0.0.0 --port=8000
 ```
 
 ```powershell
@@ -36,6 +36,8 @@ npm run dev
 ```
 
 Open `http://127.0.0.1:8000`. Seeded development accounts use the password `password`; change it before using any non-development environment.
+
+For ZKTeco PUSH, the device must be able to reach the host's LAN address on port 8000. Bind to `0.0.0.0` as above, configure the device to use the host's LAN URL, and allow the port only on a trusted private network. Do not expose the development server to the public internet.
 
 ## Tests
 

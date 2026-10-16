@@ -28,7 +28,7 @@ class EmployeeAttendanceController extends Controller
             ->where('employee_id', $employee->id)
             ->whereDate('attendance_date', '>=', $dateFrom)
             ->whereDate('attendance_date', '<=', $dateTo)
-            ->orderBy('attendance_date', 'asc')
+            ->orderBy('attendance_date')
             ->get();
 
         $totalPresent = $attendances->where('status', 'Present')->count();

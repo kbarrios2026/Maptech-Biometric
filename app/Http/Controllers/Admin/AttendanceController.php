@@ -22,7 +22,7 @@ class AttendanceController extends Controller
 
         $attendances = Attendance::with(['employee.department', 'employee.position', 'employee.status'])
             ->whereDate('attendance_date', $date)
-            ->orderByDesc('check_in_time')
+            ->orderBy('check_in_time')
             ->get();
 
         $employees = Employee::orderBy('first_name', 'asc')->get();
@@ -168,8 +168,8 @@ class AttendanceController extends Controller
         return $recordedAttendances
             ->when($employeeId, fn ($collection) => $collection->where('employee_id', $employeeId))
             ->sort(function (Attendance $left, Attendance $right) {
-                return $right->attendance_date <=> $left->attendance_date
-                    ?: strcmp((string) $right->check_in_time, (string) $left->check_in_time);
+                return $left->attendance_date <=> $right->attendance_date
+                    ?: strcmp((string) $left->check_in_time, (string) $right->check_in_time);
             })
             ->values();
     }
@@ -202,10 +202,7 @@ class AttendanceController extends Controller
             Carbon::parse($dateFrom),
             Carbon::parse($dateTo),
             $scope === 'single' ? $employeeId : null
-        )->sort(function (Attendance $left, Attendance $right) {
-            return $right->attendance_date <=> $left->attendance_date
-                ?: strcmp((string) $right->check_in_time, (string) $left->check_in_time);
-        })->values();
+        )->values();
 
         $totalEmployees = $attendances->pluck('employee_id')->unique()->count();
 

@@ -194,4 +194,174 @@ class HrAdminDtrAccessTest extends TestCase
             ->assertDontSee('DTR status')
             ->assertSee('No saved records');
     }
+
+    public function test_hr_admin_attendance_rows_and_receipt_are_ordered_from_oldest_date_to_latest_date(): void
+    {
+        Carbon::setTestNow('2026-10-30 17:00:00');
+
+        try {
+            $role = Role::create([
+                'name' => 'HR Admin',
+                'permissions' => [],
+            ]);
+            $user = User::factory()->create(['role_id' => $role->id]);
+            $employee = Employee::create([
+                'user_id' => User::factory()->create()->id,
+                'employee_id' => 'EMP-ASCENDING-1',
+                'first_name' => 'Ascending',
+                'last_name' => 'Date',
+                'email' => 'ascending-date@example.test',
+                'joining_date' => '2026-01-01',
+            ]);
+            $firstDay = Attendance::create([
+                'employee_id' => $employee->id,
+                'attendance_date' => '2026-10-01',
+                'check_in_time' => '08:00:00',
+                'status' => 'Present',
+                'source' => 'Test',
+            ]);
+            $lastDay = Attendance::create([
+                'employee_id' => $employee->id,
+                'attendance_date' => '2026-10-30',
+                'check_in_time' => '08:00:00',
+                'status' => 'Present',
+                'source' => 'Test',
+            ]);
+
+            $response = $this->actingAs($user)->get(route('admin.attendance.hr-admin', [
+                'date_from' => '2026-10-01',
+                'date_to' => '2026-10-30',
+                'employee_id' => $employee->id,
+            ]))->assertOk();
+
+            $content = $response->getContent();
+            $firstRowPosition = strpos($content, 'id="attendance-'.$firstDay->id.'"');
+            $lastRowPosition = strpos($content, 'id="attendance-'.$lastDay->id.'"');
+
+            $this->assertNotFalse($firstRowPosition);
+            $this->assertNotFalse($lastRowPosition);
+            $this->assertLessThan($lastRowPosition, $firstRowPosition);
+
+            $receiptResponse = $this->actingAs($user)->get(route('admin.attendance.receipt', [
+                'scope' => 'all',
+                'date_from' => '2026-10-01',
+                'date_to' => '2026-10-30',
+            ]))->assertOk();
+            $receiptRows = substr(
+                $receiptResponse->getContent(),
+                strpos($receiptResponse->getContent(), '<div class="section-header">Attendance Detail</div>')
+            );
+            $firstReceiptEmployee = strpos($receiptRows, 'EMP-ASCENDING-1');
+            $secondReceiptEmployee = strpos($receiptRows, 'EMP-ASCENDING-1', $firstReceiptEmployee + 1);
+
+            $this->assertNotFalse($firstReceiptEmployee);
+            $this->assertNotFalse($secondReceiptEmployee);
+            $this->assertLessThan($secondReceiptEmployee, $firstReceiptEmployee);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_employee_attendance_rows_are_ordered_from_oldest_date_to_latest_date(): void
+    {
+        Carbon::setTestNow('2026-10-30 17:00:00');
+
+        try {
+            $role = Role::create([
+                'name' => 'Employee',
+                'permissions' => [],
+            ]);
+            $user = User::factory()->create(['role_id' => $role->id]);
+            $employee = Employee::create([
+                'user_id' => $user->id,
+                'employee_id' => 'EMP-EMPLOYEE-ASCENDING',
+                'first_name' => 'Employee',
+                'last_name' => 'Ascending',
+                'email' => 'employee-ascending@example.test',
+                'joining_date' => '2026-01-01',
+            ]);
+            Attendance::create([
+                'employee_id' => $employee->id,
+                'attendance_date' => '2026-10-01',
+                'check_in_time' => '08:00:00',
+                'status' => 'Present',
+                'source' => 'Test',
+            ]);
+            Attendance::create([
+                'employee_id' => $employee->id,
+                'attendance_date' => '2026-10-30',
+                'check_in_time' => '08:00:00',
+                'status' => 'Present',
+                'source' => 'Test',
+            ]);
+
+            $response = $this->actingAs($user)->get(route('employee.attendance.index', [
+                'date_from' => '2026-10-01',
+                'date_to' => '2026-10-30',
+            ]))->assertOk();
+
+            $content = $response->getContent();
+            $recordsPosition = strpos($content, 'Attendance Records');
+            $recordsContent = substr($content, $recordsPosition);
+            $firstDatePosition = strpos($recordsContent, 'Oct 01, 2026');
+            $lastDatePosition = strpos($recordsContent, 'Oct 30, 2026');
+
+            $this->assertNotFalse($firstDatePosition);
+            $this->assertNotFalse($lastDatePosition);
+            $this->assertLessThan($lastDatePosition, $firstDatePosition);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_daily_attendance_rows_are_ordered_by_earliest_check_in_first(): void
+    {
+        $role = Role::create([
+            'name' => 'Super Admin',
+            'permissions' => [],
+        ]);
+        $user = User::factory()->create(['role_id' => $role->id]);
+        $earlyEmployee = Employee::create([
+            'user_id' => User::factory()->create()->id,
+            'employee_id' => 'EMP-EARLY-CHECKIN',
+            'first_name' => 'Early',
+            'last_name' => 'Checkin',
+            'email' => 'early-checkin@example.test',
+            'joining_date' => '2026-01-01',
+        ]);
+        $lateEmployee = Employee::create([
+            'user_id' => User::factory()->create()->id,
+            'employee_id' => 'EMP-LATE-CHECKIN',
+            'first_name' => 'Late',
+            'last_name' => 'Checkin',
+            'email' => 'late-checkin@example.test',
+            'joining_date' => '2026-01-01',
+        ]);
+        Attendance::create([
+            'employee_id' => $lateEmployee->id,
+            'attendance_date' => '2026-10-01',
+            'check_in_time' => '08:00:00',
+            'status' => 'Present',
+            'source' => 'Test',
+        ]);
+        Attendance::create([
+            'employee_id' => $earlyEmployee->id,
+            'attendance_date' => '2026-10-01',
+            'check_in_time' => '07:00:00',
+            'status' => 'Present',
+            'source' => 'Test',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('admin.attendance.index', [
+            'date' => '2026-10-01',
+        ]))->assertOk();
+
+        $content = $response->getContent();
+        $earlyTimePosition = strpos($content, '07:00:00 AM');
+        $lateTimePosition = strpos($content, '08:00:00 AM');
+
+        $this->assertNotFalse($earlyTimePosition);
+        $this->assertNotFalse($lateTimePosition);
+        $this->assertLessThan($lateTimePosition, $earlyTimePosition);
+    }
 }
