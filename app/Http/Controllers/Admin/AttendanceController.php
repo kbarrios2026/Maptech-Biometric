@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\BiometricDevice;
 use App\Models\Employee;
+use App\Services\AttendanceAbsenceReconciler;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
@@ -16,9 +17,10 @@ use Illuminate\Database\UniqueConstraintViolationException;
 
 class AttendanceController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, AttendanceAbsenceReconciler $absenceReconciler)
     {
         $date = $request->get('date', now()->toDateString());
+        $absenceReconciler->reconcile($date, $date);
 
         $attendances = Attendance::with(['employee.department', 'employee.position', 'employee.status'])
             ->whereDate('attendance_date', $date)
@@ -30,13 +32,14 @@ class AttendanceController extends Controller
         return view('admin.attendance.index', compact('attendances', 'date', 'employees'));
     }
 
-    public function hrAdmin(Request $request)
+    public function hrAdmin(Request $request, AttendanceAbsenceReconciler $absenceReconciler)
     {
         $this->queueLatestAttendanceReplay();
 
         $dateFrom = $request->get('date_from', now()->startOfMonth()->toDateString());
         $dateTo = $request->get('date_to', now()->toDateString());
         $dateTo = min(Carbon::parse($dateTo)->toDateString(), Carbon::today()->toDateString());
+        $absenceReconciler->reconcile($dateFrom, $dateTo);
         $employeeId = $request->get('employee_id');
         $status = $request->get('status');
 
@@ -158,10 +161,7 @@ class AttendanceController extends Controller
     }
 
     /**
-     * Return only actual attendance rows recorded in the database.
-     *
-     * Missing dates are displayed as empty calendar slots and are not added as
-     * synthetic Absent/Leave rows.
+     * Return saved attendance rows in ascending date and check-in order.
      */
     private function buildHrDtrRows($recordedAttendances, $employees, Carbon $dateFrom, Carbon $dateTo, $employeeId)
     {
@@ -174,12 +174,13 @@ class AttendanceController extends Controller
             ->values();
     }
 
-    public function receipt(Request $request)
+    public function receipt(Request $request, AttendanceAbsenceReconciler $absenceReconciler)
     {
         $scope = $request->get('scope', 'single');
         $dateFrom = $request->get('date_from', now()->startOfMonth()->toDateString());
         $dateTo = $request->get('date_to', now()->toDateString());
         $dateTo = min(Carbon::parse($dateTo)->toDateString(), Carbon::today()->toDateString());
+        $absenceReconciler->reconcile($dateFrom, $dateTo);
         $employeeId = $request->get('employee_id');
 
         $employee = ($scope === 'single' && $employeeId) ? Employee::findOrFail($employeeId) : null;

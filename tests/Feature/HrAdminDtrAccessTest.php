@@ -107,8 +107,11 @@ class HrAdminDtrAccessTest extends TestCase
         }
     }
 
-    public function test_hr_admin_calendar_shows_each_date_and_does_not_create_missing_attendance(): void
+    public function test_hr_admin_calendar_marks_missing_past_weekdays_absent_and_leaves_weekends_empty(): void
     {
+        Carbon::setTestNow('2026-07-06 09:00:00');
+
+        try {
         $role = Role::create([
             'name' => 'HR Admin',
             'permissions' => [],
@@ -133,15 +136,125 @@ class HrAdminDtrAccessTest extends TestCase
         $this->actingAs($user)
             ->get(route('admin.attendance.hr-admin', [
                 'date_from' => '2026-07-01',
-                'date_to' => '2026-07-31',
+                'date_to' => '2026-07-05',
             ]))
             ->assertOk()
             ->assertSee('Daily Attendance Calendar')
             ->assertSee('No saved records')
-            ->assertSee('July 31, 2026')
-            ->assertSee('1 record');
+            ->assertSee('July 5, 2026')
+            ->assertSee('Absent: 1')
+            ->assertSee('Present: 1');
 
-        $this->assertDatabaseCount('attendances', 1);
+        $this->assertDatabaseCount('attendances', 3);
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-07-01',
+            'status' => 'Absent',
+            'source' => 'Attendance Reconciliation',
+        ]);
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-07-02',
+            'status' => 'Absent',
+        ]);
+        $this->assertDatabaseMissing('attendances', [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-07-04',
+        ]);
+        $this->assertDatabaseMissing('attendances', [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-07-05',
+        ]);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_hr_admin_absence_reconciliation_preserves_attendance_leave_inactive_employees_and_today(): void
+    {
+        Carbon::setTestNow('2026-10-09 15:00:00');
+
+        try {
+            $role = Role::create([
+                'name' => 'HR Admin',
+                'permissions' => [],
+            ]);
+            $user = User::factory()->create(['role_id' => $role->id]);
+            $activeEmployee = Employee::create([
+                'user_id' => User::factory()->create()->id,
+                'employee_id' => 'EMP-RECONCILE-ACTIVE',
+                'first_name' => 'Active',
+                'last_name' => 'Employee',
+                'email' => 'reconcile-active@example.test',
+                'joining_date' => '2026-01-01',
+            ]);
+            $inactiveEmployee = Employee::create([
+                'user_id' => User::factory()->create()->id,
+                'employee_id' => 'EMP-RECONCILE-INACTIVE',
+                'first_name' => 'Inactive',
+                'last_name' => 'Employee',
+                'email' => 'reconcile-inactive@example.test',
+                'joining_date' => '2026-01-01',
+                'is_active' => false,
+            ]);
+            $onLeaveEmployee = Employee::create([
+                'user_id' => User::factory()->create()->id,
+                'employee_id' => 'EMP-RECONCILE-ON-LEAVE',
+                'first_name' => 'On Leave',
+                'last_name' => 'Employee',
+                'email' => 'reconcile-on-leave@example.test',
+                'joining_date' => '2026-01-01',
+                'employment_status' => 'On Leave',
+            ]);
+            Attendance::create([
+                'employee_id' => $activeEmployee->id,
+                'attendance_date' => '2026-10-05',
+                'check_in_time' => '08:00:00',
+                'status' => 'Present',
+                'source' => 'Test',
+            ]);
+            Attendance::create([
+                'employee_id' => $activeEmployee->id,
+                'attendance_date' => '2026-10-08',
+                'status' => 'Leave',
+                'source' => 'Test',
+            ]);
+
+            $this->actingAs($user)
+                ->get(route('admin.attendance.hr-admin', [
+                    'date_from' => '2026-10-05',
+                    'date_to' => '2026-10-09',
+                ]))
+                ->assertOk()
+                ->assertSee('Absent: 1')
+                ->assertSee('Leave: 1')
+                ->assertSee('Attendance Reconciliation')
+                ->assertSee('Active Employee');
+
+            $this->assertDatabaseCount('attendances', 4);
+            foreach (['2026-10-06', '2026-10-07'] as $date) {
+                $this->assertDatabaseHas('attendances', [
+                    'employee_id' => $activeEmployee->id,
+                    'attendance_date' => $date,
+                    'status' => 'Absent',
+                    'source' => 'Attendance Reconciliation',
+                ]);
+            }
+            $this->assertDatabaseMissing('attendances', [
+                'employee_id' => $activeEmployee->id,
+                'attendance_date' => '2026-10-09',
+            ]);
+            $this->assertDatabaseMissing('attendances', [
+                'employee_id' => $inactiveEmployee->id,
+                'attendance_date' => '2026-10-06',
+            ]);
+            $this->assertDatabaseMissing('attendances', [
+                'employee_id' => $onLeaveEmployee->id,
+                'attendance_date' => '2026-10-06',
+            ]);
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_hr_admin_status_filter_and_summary_include_half_day_records(): void

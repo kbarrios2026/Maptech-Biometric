@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:Employee')->prefix('employee')->name('employee.')->group(function () {
         Route::get('/attendance', [\App\Http\Controllers\Employee\EmployeeAttendanceController::class, 'index'])->name('attendance.index');
+        Route::post('/attendance/{attendance}/absence-reflection', [\App\Http\Controllers\Employee\EmployeeAttendanceController::class, 'submitAbsenceReflection'])->name('attendance.absence-reflection');
     });
 });
 

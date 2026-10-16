@@ -6,7 +6,7 @@
 <div class="page-header">
     <div>
         <h1 class="page-title"><i class="fas fa-clock"></i> My Attendance</h1>
-        <p class="page-subtitle">Printable daily attendance record. This view is read-only and cannot be edited.</p>
+        <p class="page-subtitle">Review your attendance and submit a reflection for any day marked absent.</p>
     </div>
 </div>
 
@@ -83,6 +83,7 @@
                         <th>Check Out</th>
                         <th>Status</th>
                         <th>Source</th>
+                        <th>Absence Reflection</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -105,10 +106,31 @@
                                 <span class="badge {{ $statusClass }}">{{ $attendance->status }}</span>
                             </td>
                             <td>{{ $attendance->source ?? 'Manual' }}</td>
+                            <td>
+                                @if($attendance->status === 'Absent')
+                                    <form method="POST" action="{{ route('employee.attendance.absence-reflection', $attendance) }}" class="absence-reflection-form">
+                                        @csrf
+                                        <label class="visually-hidden" for="absence-reflection-{{ $attendance->id }}">Your reflection for {{ \Illuminate\Support\Carbon::parse($attendance->attendance_date)->format('M d, Y') }}</label>
+                                        <textarea
+                                            id="absence-reflection-{{ $attendance->id }}"
+                                            name="absence_reflection"
+                                            class="form-control form-control-sm mb-2"
+                                            rows="2"
+                                            maxlength="2000"
+                                            required
+                                            placeholder="Explain your absence">{{ old('absence_reflection', $attendance->absence_reflection) }}</textarea>
+                                        <button type="submit" class="btn btn-sm btn-primary">
+                                            {{ filled($attendance->absence_reflection) ? 'Update Reflection' : 'Submit Reflection' }}
+                                        </button>
+                                    </form>
+                                @else
+                                    {{ $attendance->absence_reflection ?: '—' }}
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">No attendance records found in the selected date range.</td>
+                            <td colspan="6" class="text-center text-muted py-4">No attendance records found in the selected date range.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -121,6 +143,10 @@
     @media print {
         body {
             background: #fff !important;
+        }
+
+        .absence-reflection-form button {
+            display: none;
         }
 
         .app-navbar,

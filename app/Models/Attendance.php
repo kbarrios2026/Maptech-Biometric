@@ -16,6 +16,7 @@ class Attendance extends Model
         'status',
         'source',
         'notes',
+        'absence_reflection',
         'overtime_reason',
         'overtime_approval_status',
         'overtime_approval_reason',

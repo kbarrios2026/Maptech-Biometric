@@ -182,7 +182,7 @@
     <section class="card mb-4 attendance-calendar" aria-labelledby="attendance-calendar-heading">
         <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h2 id="attendance-calendar-heading" class="h5 mb-0">Daily Attendance Calendar</h2>
-            <span class="text-muted small">Shows saved attendance only. Missing dates are not marked absent or added to the database.</span>
+            <span class="text-muted small">Missing active employees are marked absent on completed weekdays. Existing attendance and leave records are preserved; weekends and today are not auto-marked absent.</span>
         </div>
         <div class="card-body">
             <div class="attendance-calendar-grid">
@@ -232,6 +232,7 @@
                         <th>Status</th>
                         <th class="ot-review-col">OT Review</th>
                         <th>Source</th>
+                        <th>Absence Reflection</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -319,10 +320,11 @@
                                 @endif
                             </td>
                             <td>{{ $attendance->source ?? '-' }}</td>
+                            <td>{{ $attendance->status === 'Absent' ? ($attendance->absence_reflection ?: 'Not submitted') : '—' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">No attendance records found for the selected filters.</td>
+                            <td colspan="9" class="text-center text-muted py-4">No attendance records found for the selected filters.</td>
                         </tr>
                     @endforelse
                 </tbody>

@@ -119,6 +119,7 @@
                                 <th>Check In</th>
                                 <th>Check Out</th>
                                 <th>Status</th>
+                                <th>Absence Reflection</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -140,10 +141,11 @@
                                             {{ $attendance->status }}
                                         </span>
                                     </td>
+                                    <td>{{ $attendance->status === 'Absent' ? ($attendance->absence_reflection ?: 'Not submitted') : '—' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">No attendance records found for this date.</td>
+                                    <td colspan="6" class="text-center text-muted py-4">No attendance records found for this date.</td>
                                 </tr>
                             @endforelse
                         </tbody>

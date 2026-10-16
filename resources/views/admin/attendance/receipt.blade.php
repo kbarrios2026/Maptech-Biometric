@@ -370,6 +370,7 @@
                         <th style="width: 14%">Check Out</th>
                         <th style="width: 14%">Status</th>
                         <th style="width: 14%">Source</th>
+                        <th>Absence Reflection</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -384,10 +385,11 @@
                             <td>{{ $attendance->check_out_time ? \Illuminate\Support\Carbon::parse($attendance->check_out_time)->format('h:i:s A') : '-' }}</td>
                             <td>{{ $attendance->status }}</td>
                             <td>{{ $attendance->source ?? '-' }}</td>
+                            <td>{{ $attendance->status === 'Absent' ? ($attendance->absence_reflection ?: 'Not submitted') : '—' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ (($scope ?? 'single') === 'all') ? 7 : 5 }}" class="text-center text-muted py-4">
+                            <td colspan="{{ (($scope ?? 'single') === 'all') ? 8 : 6 }}" class="text-center text-muted py-4">
                                 @if(($scope ?? 'single') === 'all')
                                     No attendance found for all employees in the selected date range.
                                 @else

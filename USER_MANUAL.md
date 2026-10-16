@@ -208,6 +208,10 @@ There are three attendance views:
 - generate printable summary by date range
 - single employee or all employees scope
 
+Employees can submit or update a reflection on their own attendance history for any day marked Absent. Reflections appear in employee attendance history, admin attendance views, and printable receipts.
+
+When an attendance list or report is opened, active employees with no attendance record are automatically marked Absent for completed weekdays in the selected date range. Existing attendance and Leave records are preserved. Weekends and the current day are not automatically marked absent; reflections can be submitted after an absence appears in the employee's attendance history.
+
 Manual attendance statuses:
 - Present
 - Late
