@@ -34,6 +34,7 @@
                         <option value="" @selected($status === '')>All Statuses</option>
                         <option value="Present" @selected($status === 'Present')>Present</option>
                         <option value="Late" @selected($status === 'Late')>Late</option>
+                        <option value="Undertime" @selected($status === 'Undertime')>Undertime</option>
                         <option value="Half Day" @selected($status === 'Half Day')>Half Day</option>
                         <option value="Absent" @selected($status === 'Absent')>Absent</option>
                         <option value="Leave" @selected($status === 'Leave')>On Leave</option>
@@ -115,6 +116,10 @@
                     <div class="report-value">{{ $overtimeCount }}</div>
                 </div>
                 <div class="report-block">
+                    <div class="report-label">Undertime</div>
+                    <div class="report-value">{{ $undertimeCount }}</div>
+                </div>
+                <div class="report-block">
                     <div class="report-label">On Leave</div>
                     <div class="report-value">{{ $leaveCount }}</div>
                 </div>
@@ -134,11 +139,17 @@
         </div>
     </div>
 
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-7 g-3 mb-4 no-print">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-8 g-3 mb-4 no-print">
         <div class="col">
             <div class="card p-3 h-100 hr-summary-card">
                 <div class="text-muted">Attendance Records</div>
                 <h3 class="mb-0">{{ $totalCount }}</h3>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card p-3 h-100 hr-summary-card">
+                <div class="text-muted">Undertime</div>
+                <h3 class="mb-0">{{ $undertimeCount }}</h3>
             </div>
         </div>
         <div class="col">
@@ -204,7 +215,7 @@
                         @if($calendarDay['total'] > 0)
                             <div class="attendance-calendar-total">{{ $calendarDay['total'] }} {{ \Illuminate\Support\Str::plural('record', $calendarDay['total']) }}</div>
                             <div class="attendance-calendar-statuses">
-                                @foreach(['present' => 'Present', 'late' => 'Late', 'overtime' => 'OT', 'leave' => 'Leave', 'absent' => 'Absent', 'other' => 'Other'] as $statusKey => $statusLabel)
+                                @foreach(['present' => 'Present', 'late' => 'Late', 'overtime' => 'OT', 'undertime' => 'Undertime', 'leave' => 'Leave', 'absent' => 'Absent', 'other' => 'Other'] as $statusKey => $statusLabel)
                                     @if($calendarDay[$statusKey] > 0)
                                         <span>{{ $statusLabel }}: {{ $calendarDay[$statusKey] }}</span>
                                     @endif
@@ -226,8 +237,9 @@
                     <tr>
                         <th>Employee</th>
                         <th>Department</th>
-                        <th>Date</th>
+                        <th>Check-in Date</th>
                         <th>Check In</th>
+                        <th>Check-out Date</th>
                         <th>Check Out</th>
                         <th>Status</th>
                         <th class="ot-review-col">OT Review</th>
@@ -249,15 +261,17 @@
                             <td>{{ $attendance->employee?->department?->name ?? '-' }}</td>
                             <td>{{ $attendance->attendance_date?->format('M d, Y') ?? '-' }}</td>
                             <td>
-                                {{ $attendance->check_in_time ? \Illuminate\Support\Carbon::createFromFormat('H:i:s', $attendance->check_in_time)->format('h:i:s A') : '-' }}
+                                {{ $attendance->check_in_time ? \Illuminate\Support\Carbon::parse($attendance->check_in_time)->format('h:i:s A') : '-' }}
                             </td>
+                            <td>{{ $attendance->check_out_time ? ($attendance->check_out_date?->format('M d, Y') ?? $attendance->attendance_date?->format('M d, Y') ?? '-') : '-' }}</td>
                             <td>
-                                {{ $attendance->check_out_time ? \Illuminate\Support\Carbon::createFromFormat('H:i:s', $attendance->check_out_time)->format('h:i:s A') : '-' }}
+                                {{ $attendance->check_out_time ? \Illuminate\Support\Carbon::parse($attendance->check_out_time)->format('h:i:s A') : '-' }}
                             </td>
                             <td class="status-cell">
                                 @if(in_array($attendance->status, ['Absent', 'Leave'], true))
                                     <form method="POST" action="{{ route('admin.attendance.status') }}" class="absence-status-form">
                                         @csrf
+                                        <input type="hidden" name="attendance_id" value="{{ $attendance->id }}">
                                         <input type="hidden" name="employee_id" value="{{ $attendance->employee_id }}">
                                         <input type="hidden" name="attendance_date" value="{{ $attendance->attendance_date?->toDateString() }}">
                                         <input type="hidden" name="return_url" value="{{ url()->full() }}">
@@ -271,7 +285,7 @@
                                         </button>
                                     </form>
                                 @else
-                                    <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : ($attendance->status === 'Overtime' ? 'bg-overtime' : 'bg-secondary')) }}">
+                                                    <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : ($attendance->status === 'Undertime' ? 'bg-danger' : ($attendance->status === 'Overtime' ? 'bg-overtime' : 'bg-secondary'))) }}">
                                         {{ $attendance->status }}
                                     </span>
                                 @endif
@@ -324,7 +338,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">No attendance records found for the selected filters.</td>
+                            <td colspan="10" class="text-center text-muted py-4">No attendance records found for the selected filters.</td>
                         </tr>
                     @endforelse
                 </tbody>

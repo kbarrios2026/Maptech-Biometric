@@ -551,7 +551,7 @@
                     <td>${a.date}</td>
                     <td>${a.check_in || '-'}</td>
                     <td>${a.check_out || '-'}</td>
-                    <td><span class="badge bg-${a.status === 'Present' ? 'success' : a.status === 'Late' ? 'warning' : a.status === 'Overtime' ? 'overtime' : a.status === 'Absent' ? 'danger' : 'secondary'}">${a.status}</span></td>
+                    <td><span class="badge bg-${a.status === 'Present' ? 'success' : a.status === 'Late' ? 'warning' : a.status === 'Undertime' ? 'danger' : a.status === 'Overtime' ? 'overtime' : a.status === 'Absent' ? 'danger' : 'secondary'}">${a.status}</span></td>
                     <td>${a.source || '-'}</td>
                     <td>${a.created_at}</td>
                 </tr>

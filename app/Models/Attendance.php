@@ -11,6 +11,7 @@ class Attendance extends Model
     protected $fillable = [
         'employee_id',
         'attendance_date',
+        'check_out_date',
         'check_in_time',
         'check_out_time',
         'status',
@@ -26,6 +27,7 @@ class Attendance extends Model
 
     protected $casts = [
         'attendance_date' => 'date',
+        'check_out_date' => 'date',
         'overtime_approved_at' => 'datetime',
     ];
 
@@ -70,16 +72,53 @@ class Attendance extends Model
 
     public static function statusForCheckIn(?string $checkInTime): string
     {
+        if (empty($checkInTime)) {
+            return 'Present';
+        }
+
         if (self::isHalfDayCheckIn($checkInTime)) {
             return 'Half Day';
         }
 
         try {
-            return Carbon::parse($checkInTime)->format('H:i:s') >= '08:16:00'
+            return Carbon::parse($checkInTime)->format('H:i:s') > '08:15:00'
                 ? 'Late'
                 : 'Present';
         } catch (\Throwable) {
             return 'Present';
         }
+    }
+
+    public static function isUndertimeCheckout(
+        ?string $checkOutTime,
+        ?string $attendanceDate = null,
+        ?string $checkOutDate = null
+    ): bool {
+        if (empty($checkOutTime)) {
+            return false;
+        }
+
+        if ($attendanceDate && $checkOutDate && $attendanceDate !== $checkOutDate) {
+            return false;
+        }
+
+        try {
+            return Carbon::parse($checkOutTime)->format('H:i:s') < '16:00:00';
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    public static function statusForTimes(
+        ?string $checkInTime,
+        ?string $checkOutTime,
+        ?string $attendanceDate = null,
+        ?string $checkOutDate = null
+    ): string {
+        if (self::isUndertimeCheckout($checkOutTime, $attendanceDate, $checkOutDate)) {
+            return 'Undertime';
+        }
+
+        return self::statusForCheckIn($checkInTime);
     }
 }

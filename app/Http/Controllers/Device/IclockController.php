@@ -220,6 +220,7 @@ class IclockController extends Controller
             $attendance = Attendance::query()
                 ->where('employee_id', $employee->id)
                 ->whereDate('attendance_date', $date)
+                ->where('source', $device->name)
                 ->first();
 
             if (! $attendance) {
@@ -260,7 +261,15 @@ class IclockController extends Controller
 
             $attendance->source = $device->name;
             if (! in_array($attendance->status, ['Absent', 'Leave', 'Overtime'], true) && $attendance->check_in_time) {
-                $attendance->status = Attendance::statusForCheckIn($attendance->check_in_time);
+                $attendance->status = Attendance::statusForTimes(
+                    $attendance->check_in_time,
+                    $attendance->check_out_time
+                );
+            } elseif (
+                ! in_array($attendance->status, ['Absent', 'Leave', 'Overtime'], true)
+                && Attendance::isUndertimeCheckout($attendance->check_out_time)
+            ) {
+                $attendance->status = 'Undertime';
             }
             if (
                 ! in_array($attendance->status, ['Absent', 'Leave'], true)
@@ -281,6 +290,7 @@ class IclockController extends Controller
                 $attendance = Attendance::query()
                     ->where('employee_id', $employee->id)
                     ->whereDate('attendance_date', $date)
+                    ->where('source', $device->name)
                     ->first();
 
                 if (! $attendance) {
@@ -297,7 +307,15 @@ class IclockController extends Controller
 
                 $attendance->source = $device->name;
                 if (! in_array($attendance->status, ['Absent', 'Leave', 'Overtime'], true) && $attendance->check_in_time) {
-                    $attendance->status = Attendance::statusForCheckIn($attendance->check_in_time);
+                    $attendance->status = Attendance::statusForTimes(
+                        $attendance->check_in_time,
+                        $attendance->check_out_time
+                    );
+                } elseif (
+                    ! in_array($attendance->status, ['Absent', 'Leave', 'Overtime'], true)
+                    && Attendance::isUndertimeCheckout($attendance->check_out_time)
+                ) {
+                    $attendance->status = 'Undertime';
                 }
                 if (
                     ! in_array($attendance->status, ['Absent', 'Leave'], true)

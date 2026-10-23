@@ -10,10 +10,10 @@ use App\Services\AttendanceAbsenceReconciler;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Database\UniqueConstraintViolationException;
 
 class AttendanceController extends Controller
 {
@@ -69,6 +69,7 @@ class AttendanceController extends Controller
             $present = $dayAttendances->whereIn('status', ['Present', 'Half Day'])->count();
             $late = $dayAttendances->where('status', 'Late')->count();
             $overtime = $dayAttendances->where('status', 'Overtime')->count();
+            $undertime = $dayAttendances->where('status', 'Undertime')->count();
             $leave = $dayAttendances->where('status', 'Leave')->count();
             $absent = $dayAttendances->where('status', 'Absent')->count();
 
@@ -78,9 +79,10 @@ class AttendanceController extends Controller
                 'present' => $present,
                 'late' => $late,
                 'overtime' => $overtime,
+                'undertime' => $undertime,
                 'leave' => $leave,
                 'absent' => $absent,
-                'other' => $dayAttendances->count() - $present - $late - $overtime - $leave - $absent,
+                'other' => $dayAttendances->count() - $present - $late - $overtime - $undertime - $leave - $absent,
             ]);
         }
         $calendarLeadingDays = (int) Carbon::parse($dateFrom)->dayOfWeek;
@@ -93,7 +95,7 @@ class AttendanceController extends Controller
             $employeeId
         );
 
-        if (in_array($status, ['Present', 'Late', 'Overtime', 'Absent', 'Leave', 'Half Day'], true)) {
+        if (in_array($status, ['Present', 'Late', 'Overtime', 'Undertime', 'Absent', 'Leave', 'Half Day'], true)) {
             $attendances = $attendances->where('status', $status)->values();
         } else {
             $status = '';
@@ -103,9 +105,10 @@ class AttendanceController extends Controller
         $presentCount = $attendances->whereIn('status', ['Present', 'Half Day'])->count();
         $lateCount = $attendances->where('status', 'Late')->count();
         $overtimeCount = $attendances->where('status', 'Overtime')->count();
+        $undertimeCount = $attendances->where('status', 'Undertime')->count();
         $leaveCount = $attendances->where('status', 'Leave')->count();
         $absentCount = $attendances->where('status', 'Absent')->count();
-        $otherCount = $totalCount - $presentCount - $lateCount - $overtimeCount - $leaveCount - $absentCount;
+        $otherCount = $totalCount - $presentCount - $lateCount - $overtimeCount - $undertimeCount - $leaveCount - $absentCount;
 
         $attendances = new LengthAwarePaginator(
             $attendances->forPage((int) $request->get('page', 1), 100)->values(),
@@ -129,6 +132,7 @@ class AttendanceController extends Controller
             'presentCount',
             'lateCount',
             'overtimeCount',
+            'undertimeCount',
             'leaveCount',
             'absentCount',
             'otherCount'
@@ -223,42 +227,69 @@ class AttendanceController extends Controller
         $data = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'attendance_date' => 'required|date',
-            'check_in_time' => 'nullable',
-            'check_out_time' => 'nullable',
-            'status' => 'required|in:Present,Late,Absent,Half Day,Leave,Overtime',
+            'check_out_date' => 'nullable|date|after_or_equal:attendance_date',
+            'check_in_time' => 'nullable|date_format:H:i,H:i:s',
+            'check_out_time' => 'nullable|date_format:H:i,H:i:s',
+            'status' => 'required|in:Present,Late,Absent,Half Day,Leave,Overtime,Undertime',
             'source' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'overtime_reason' => 'nullable|string|required_if:status,Overtime',
         ]);
 
+        foreach (['check_in_time', 'check_out_time'] as $timeField) {
+            if (! empty($data[$timeField])) {
+                $data[$timeField] = Carbon::parse($data[$timeField])->format('H:i:s');
+            }
+        }
+
         if (
-            ! empty($data['check_in_time'])
-            && Attendance::isHalfDayCheckIn($data['check_in_time'])
-            && ! in_array($data['status'], ['Absent', 'Leave'], true)
+            ! in_array($data['status'], ['Absent', 'Leave', 'Overtime'], true)
+            && (! empty($data['check_in_time']) || ! empty($data['check_out_time']))
         ) {
-            $data['status'] = 'Half Day';
+            $data['status'] = Attendance::statusForTimes(
+                $data['check_in_time'] ?? null,
+                $data['check_out_time'] ?? null,
+                Carbon::parse($data['attendance_date'])->toDateString(),
+                ! empty($data['check_out_time'])
+                    ? Carbon::parse($data['check_out_date'] ?? $data['attendance_date'])->toDateString()
+                    : null
+            );
+        }
+
+        $attendanceDate = Carbon::parse($data['attendance_date'])->toDateString();
+        $checkOutDate = ! empty($data['check_out_time'])
+            ? Carbon::parse($data['check_out_date'] ?? $attendanceDate)->toDateString()
+            : null;
+
+        if (
+            $checkOutDate === $attendanceDate
+            && ! empty($data['check_in_time'])
+            && ! empty($data['check_out_time'])
+            && $data['check_out_time'] <= $data['check_in_time']
+        ) {
+            return back()
+                ->withErrors(['check_out_time' => 'Check-out must be after check-in. For overnight shifts, choose a later check-out date.'])
+                ->withInput();
         }
 
         $overtime = ($data['status'] ?? null) === 'Overtime';
+        $attributes = [
+            'employee_id' => $data['employee_id'],
+            'attendance_date' => $attendanceDate,
+            'check_out_date' => $checkOutDate,
+            'check_in_time' => $data['check_in_time'] ?? null,
+            'check_out_time' => $data['check_out_time'] ?? null,
+            'status' => $data['status'],
+            'source' => $data['source'] ?? 'Manual',
+            'notes' => $data['notes'] ?? null,
+            'overtime_reason' => $overtime ? ($data['overtime_reason'] ?? null) : null,
+            'overtime_approval_status' => $overtime ? 'Pending' : null,
+            'overtime_approval_reason' => null,
+            'overtime_approved_by' => null,
+            'overtime_approved_at' => null,
+        ];
 
-        $attendance = Attendance::updateOrCreate(
-            [
-                'employee_id' => $data['employee_id'],
-                'attendance_date' => $data['attendance_date'],
-            ],
-            [
-                'check_in_time' => $data['check_in_time'] ?? null,
-                'check_out_time' => $data['check_out_time'] ?? null,
-                'status' => $data['status'],
-                'source' => $data['source'] ?? null,
-                'notes' => $data['notes'] ?? null,
-                'overtime_reason' => $overtime ? ($data['overtime_reason'] ?? null) : null,
-                'overtime_approval_status' => $overtime ? 'Pending' : null,
-                'overtime_approval_reason' => null,
-                'overtime_approved_by' => null,
-                'overtime_approved_at' => null,
-            ]
-        );
+        $attendance = Attendance::create($attributes);
 
         if (
             ! $overtime
@@ -286,11 +317,44 @@ class AttendanceController extends Controller
         return back()->with('success', 'Attendance saved.');
     }
 
+    public function destroy(Attendance $attendance)
+    {
+        $employeeId = $attendance->employee_id;
+        $attendanceDate = $attendance->attendance_date?->toDateString();
+        $attendanceId = $attendance->id;
+        $description = "Deleted attendance record {$attendanceId} for employee {$employeeId} on {$attendanceDate}.";
+
+        DB::transaction(function () use ($attendance, $employeeId, $attendanceDate) {
+            DB::table('attendance_absence_suppressions')->insertOrIgnore([
+                'employee_id' => $employeeId,
+                'attendance_date' => $attendanceDate,
+                'created_at' => now(),
+            ]);
+
+            $attendance->delete();
+        });
+
+        if (class_exists('\App\Models\ActivityLog')) {
+            \App\Models\ActivityLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'delete_attendance',
+                'model' => 'Attendance',
+                'model_id' => $attendanceId,
+                'description' => $description,
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.attendance.index', ['date' => $attendanceDate])
+            ->with('success', 'Attendance record deleted.');
+    }
+
     public function updateStatus(Request $request)
     {
         $data = $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'attendance_date' => 'required|date',
+            'attendance_id' => 'nullable|integer|exists:attendances,id',
             'status' => 'required|in:Absent,Leave',
             'return_url' => 'nullable|url',
         ]);
@@ -315,23 +379,23 @@ class AttendanceController extends Controller
             'attendance_date' => $data['attendance_date'],
         ];
 
-        $attendance = Attendance::query()
-            ->where('employee_id', $data['employee_id'])
-            ->whereDate('attendance_date', $data['attendance_date'])
-            ->first();
+        $attendance = ! empty($data['attendance_id'])
+            ? Attendance::query()
+                ->whereKey($data['attendance_id'])
+                ->where('employee_id', $data['employee_id'])
+                ->whereDate('attendance_date', $data['attendance_date'])
+                ->firstOrFail()
+            : Attendance::query()
+                ->where('employee_id', $data['employee_id'])
+                ->whereDate('attendance_date', $data['attendance_date'])
+                ->whereIn('status', ['Absent', 'Leave'])
+                ->first();
 
         if ($attendance) {
+            abort_unless(in_array($attendance->status, ['Absent', 'Leave'], true), 422);
             $attendance->forceFill($attributes)->save();
         } else {
-            try {
-                Attendance::create($identity + $attributes);
-            } catch (UniqueConstraintViolationException) {
-                // A device sync can create the same row between the lookup and insert.
-                Attendance::query()
-                    ->where('employee_id', $data['employee_id'])
-                    ->whereDate('attendance_date', $data['attendance_date'])
-                    ->update($attributes);
-            }
+            Attendance::create($identity + $attributes);
         }
 
         if (class_exists('\App\Models\ActivityLog')) {

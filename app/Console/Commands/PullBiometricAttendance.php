@@ -24,6 +24,8 @@ class PullBiometricAttendance extends Command
         $pullAll = $this->option('all');
         $clear = $this->option('clear');
 
+        $totalProcessed = 0;
+        $totalErrors = 0;
         $devices = collect();
 
         if ($deviceId) {
@@ -33,6 +35,14 @@ class PullBiometricAttendance extends Command
 
                 return Command::FAILURE;
             }
+
+            if ($device->sync_mode !== 'pull') {
+                $this->error("Device {$device->name} is configured for push mode and cannot be pulled over the ZKTeco TCP/UDP protocol.");
+                $this->line("Use biometric:replay-attendance {$device->id} <from> <to> to ask it to resend logs after it can reach and poll this server.");
+
+                return Command::FAILURE;
+            }
+
             $devices->push($device);
         } elseif ($pullAll) {
             $devices = BiometricDevice::where('is_active', true)
@@ -53,18 +63,16 @@ class PullBiometricAttendance extends Command
             if ($devices->isEmpty()) {
                 $this->warn('No active pull-mode devices found. Use --all or --device to specify.');
 
-                return $totalErrors > 0 ? Command::FAILURE : Command::SUCCESS;
+                return Command::SUCCESS;
             }
         }
-
-        $totalProcessed = 0;
-        $totalErrors = 0;
 
         foreach ($devices as $device) {
             $this->info("Processing device: {$device->name} ({$device->ip_address}:{$device->port})");
 
             if (empty($device->ip_address)) {
-                $this->warn('  [SKIP] No IP address configured.');
+                $this->error('  [ERROR] No IP address configured.');
+                $totalErrors++;
 
                 continue;
             }
@@ -82,9 +90,16 @@ class PullBiometricAttendance extends Command
 
             if ($clear && $result['total'] > 0 && empty($result['errors'])) {
                 if ($zkteco->connect($device->ip_address, $device->port ?? 4370, $device->comm_key ?? '0')) {
-                    $zkteco->clearAttendanceLogs();
+                    if (! $zkteco->clearAttendanceLogs()) {
+                        $this->error('  [ERROR] Attendance logs were processed but could not be cleared from the device.');
+                        $totalErrors++;
+                    } else {
+                        $this->line('  [OK] Attendance logs cleared from device.');
+                    }
                     $zkteco->disconnect();
-                    $this->line('  [OK] Attendance logs cleared from device.');
+                } else {
+                    $this->error('  [ERROR] Attendance logs were processed but the device could not be reconnected to clear them.');
+                    $totalErrors++;
                 }
             }
 
@@ -98,6 +113,6 @@ class PullBiometricAttendance extends Command
             $this->warn("Total errors: {$totalErrors}");
         }
 
-        return Command::SUCCESS;
+        return $totalErrors > 0 ? Command::FAILURE : Command::SUCCESS;
     }
 }

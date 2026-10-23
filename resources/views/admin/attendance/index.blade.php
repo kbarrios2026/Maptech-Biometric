@@ -46,6 +46,12 @@
         </div>
         <div class="col">
             <div class="card p-3 attendance-stat-card">
+                <div class="text-muted stat-label">Undertime</div>
+                <h3 class="mb-0 stat-value">{{ $attendances->where('status', 'Undertime')->count() }}</h3>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card p-3 attendance-stat-card">
                 <div class="text-muted stat-label">Other</div>
                 <h3 class="mb-0 stat-value">{{ $attendances->whereIn('status', ['Half Day', 'Leave', 'Absent'])->count() }}</h3>
             </div>
@@ -68,7 +74,7 @@
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label entry-label">Date</label>
+                            <label class="form-label entry-label">Check-in Date</label>
                             <input type="date" name="attendance_date" class="form-control" value="{{ $date }}" required>
                         </div>
                         <div class="col-md-6">
@@ -76,6 +82,7 @@
                             <select name="status" class="form-select" required>
                                 <option value="Present">Present</option>
                                 <option value="Late">Late</option>
+                                <option value="Undertime">Undertime</option>
                                 <option value="Overtime">Overtime</option>
                                 <option value="Half Day">Half Day</option>
                                 <option value="Leave">Leave</option>
@@ -84,11 +91,16 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label entry-label">Check In</label>
-                            <input type="time" name="check_in_time" class="form-control">
+                            <input type="time" name="check_in_time" class="form-control" step="1">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label entry-label">Check Out</label>
-                            <input type="time" name="check_out_time" class="form-control">
+                            <input type="time" name="check_out_time" class="form-control" step="1">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label entry-label">Check-out Date</label>
+                            <input type="date" name="check_out_date" class="form-control">
+                            <small class="text-muted">Leave blank for a same-day checkout.</small>
                         </div>
                     </div>
                     <div class="mb-3 mt-3">
@@ -116,10 +128,13 @@
                             <tr>
                                 <th>Employee</th>
                                 <th>Department</th>
+                                <th>Check-in Date</th>
                                 <th>Check In</th>
+                                <th>Check-out Date</th>
                                 <th>Check Out</th>
                                 <th>Status</th>
                                 <th>Absence Reflection</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -130,22 +145,36 @@
                                         <small class="text-muted">{{ $attendance->employee?->employee_id ?? '-' }}</small>
                                     </td>
                                     <td>{{ $attendance->employee?->department?->name ?? '-' }}</td>
+                                    <td>{{ $attendance->attendance_date?->format('M d, Y') ?? '-' }}</td>
                                     <td>
                                         {{ $attendance->check_in_time ? \Illuminate\Support\Carbon::parse($attendance->check_in_time)->format('h:i:s A') : '-' }}
                                     </td>
+                                    <td>{{ $attendance->check_out_time ? ($attendance->check_out_date?->format('M d, Y') ?? $attendance->attendance_date?->format('M d, Y') ?? '-') : '-' }}</td>
                                     <td>
                                         {{ $attendance->check_out_time ? \Illuminate\Support\Carbon::parse($attendance->check_out_time)->format('h:i:s A') : '-' }}
                                     </td>
                                     <td>
-                                        <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : ($attendance->status === 'Overtime' ? 'bg-overtime' : 'bg-secondary')) }}">
+                                        <span class="badge {{ $attendance->status === 'Present' ? 'bg-success' : ($attendance->status === 'Late' ? 'bg-warning text-dark' : ($attendance->status === 'Undertime' ? 'bg-danger' : ($attendance->status === 'Overtime' ? 'bg-overtime' : 'bg-secondary'))) }}">
                                             {{ $attendance->status }}
                                         </span>
                                     </td>
                                     <td>{{ $attendance->status === 'Absent' ? ($attendance->absence_reflection ?: 'Not submitted') : '—' }}</td>
+                                    <td>
+                                        <form method="POST"
+                                              action="{{ route('admin.attendance.destroy', $attendance) }}"
+                                              onsubmit="return confirm('Delete this attendance record for {{ $attendance->employee?->full_name ?? 'this employee' }} on {{ $attendance->attendance_date?->format('M d, Y') }}? This cannot be undone.')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete attendance record">
+                                                <i class="fas fa-trash" aria-hidden="true"></i>
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center text-muted py-4">No attendance records found for this date.</td>
+                                    <td colspan="9" class="text-center text-muted py-4">No attendance records found for this date.</td>
                                 </tr>
                             @endforelse
                         </tbody>

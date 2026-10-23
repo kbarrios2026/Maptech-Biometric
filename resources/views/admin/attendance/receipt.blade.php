@@ -365,8 +365,9 @@
                             <th style="width: 24%">Employee</th>
                             <th style="width: 12%">Employee ID</th>
                         @endif
-                        <th style="width: 22%">Date</th>
+                        <th style="width: 18%">Check-in Date</th>
                         <th style="width: 14%">Check In</th>
+                        <th style="width: 18%">Check-out Date</th>
                         <th style="width: 14%">Check Out</th>
                         <th style="width: 14%">Status</th>
                         <th style="width: 14%">Source</th>
@@ -382,6 +383,7 @@
                             @endif
                             <td>{{ $attendance->attendance_date?->format('M d, Y') ?? $date }}</td>
                             <td>{{ $attendance->check_in_time ? \Illuminate\Support\Carbon::parse($attendance->check_in_time)->format('h:i:s A') : '-' }}</td>
+                            <td>{{ $attendance->check_out_time ? ($attendance->check_out_date?->format('M d, Y') ?? $attendance->attendance_date?->format('M d, Y') ?? '-') : '-' }}</td>
                             <td>{{ $attendance->check_out_time ? \Illuminate\Support\Carbon::parse($attendance->check_out_time)->format('h:i:s A') : '-' }}</td>
                             <td>{{ $attendance->status }}</td>
                             <td>{{ $attendance->source ?? '-' }}</td>
@@ -389,7 +391,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ (($scope ?? 'single') === 'all') ? 8 : 6 }}" class="text-center text-muted py-4">
+                            <td colspan="{{ (($scope ?? 'single') === 'all') ? 9 : 7 }}" class="text-center text-muted py-4">
                                 @if(($scope ?? 'single') === 'all')
                                     No attendance found for all employees in the selected date range.
                                 @else

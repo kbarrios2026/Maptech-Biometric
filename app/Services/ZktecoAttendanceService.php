@@ -35,6 +35,7 @@ class ZktecoAttendanceService
             $attendance = Attendance::query()
                 ->where('employee_id', $employee->id)
                 ->whereDate('attendance_date', $date)
+                ->where('source', $device->name)
                 ->first();
 
             if (! $attendance) {
@@ -60,11 +61,23 @@ class ZktecoAttendanceService
                 if ($attendance->status === 'Absent' && $attendance->check_in_time) {
                     $attendance->status = $status;
                 } elseif (! in_array($attendance->status, ['Leave', 'Overtime'], true) && $attendance->check_in_time) {
-                    $attendance->status = Attendance::statusForCheckIn($attendance->check_in_time);
+                    $attendance->status = Attendance::statusForTimes(
+                        $attendance->check_in_time,
+                        $attendance->check_out_time
+                    );
                 }
             }
 
             $attendance->source = $device->name;
+            if (
+                ! in_array($attendance->status, ['Absent', 'Leave', 'Overtime'], true)
+                && ($attendance->check_in_time || $attendance->check_out_time)
+            ) {
+                $attendance->status = Attendance::statusForTimes(
+                    $attendance->check_in_time,
+                    $attendance->check_out_time
+                );
+            }
             if (
                 ! in_array($attendance->status, ['Absent', 'Leave'], true)
                 && $attendance->overtime_approval_status !== 'Rejected'

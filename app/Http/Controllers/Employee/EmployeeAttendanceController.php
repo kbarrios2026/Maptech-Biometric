@@ -39,6 +39,7 @@ class EmployeeAttendanceController extends Controller
         $totalAbsent = $attendances->where('status', 'Absent')->count();
         $totalLeave = $attendances->where('status', 'Leave')->count();
         $totalOvertime = $attendances->where('status', 'Overtime')->count();
+        $totalUndertime = $attendances->where('status', 'Undertime')->count();
 
         return view('employee.attendance.index', compact(
             'employee',
@@ -49,7 +50,8 @@ class EmployeeAttendanceController extends Controller
             'totalLate',
             'totalAbsent',
             'totalLeave',
-            'totalOvertime'
+            'totalOvertime',
+            'totalUndertime'
         ));
     }
 

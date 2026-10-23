@@ -195,12 +195,16 @@ There are three attendance views:
 
 1. Daily Attendance (Admin > Attendance)
 - filter by date
-- view employee check-ins and check-outs
-- add or update manual attendance
+- view each employee shift's check-in and check-out dates and times
+- add a separate manual attendance record for each shift
+- enter check-in and check-out times to second precision
+- check-ins after 8:15 AM are automatically marked Late; same-day check-outs before 4:00 PM are marked Undertime
+- set a later check-out date for overnight shifts; leave it blank for same-day check-out
 
 2. HR Attendance View (Admin > Attendance HR)
 - filter by date range
 - optional filter by employee
+- view each shift as a separate row, including overnight check-out dates
 - view totals for Present, Late, Overtime, and Others
 - paginate through records
 

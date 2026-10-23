@@ -102,6 +102,42 @@ class BiometricAttendanceSyncTest extends TestCase
         $this->assertSame('Overtime', $attendance->status);
     }
 
+    public function test_adms_marks_late_checkin_and_early_checkout_as_undertime(): void
+    {
+        $employee = Employee::create([
+            'user_id' => User::factory()->create()->id,
+            'employee_id' => 'EMP-ADMS-UNDERTIME',
+            'first_name' => 'Early',
+            'last_name' => 'Checkout',
+            'email' => 'early-checkout@example.test',
+            'joining_date' => '2026-01-01',
+            'biometric_id' => '54322',
+        ]);
+        BiometricDevice::create([
+            'name' => 'Test device',
+            'serial_number' => 'UNDERTIME-DEVICE',
+            'sync_mode' => 'push',
+        ]);
+
+        $this->call(
+            'POST',
+            '/iclock/cdata?SN=UNDERTIME-DEVICE&table=ATTLOG',
+            server: ['CONTENT_TYPE' => 'text/plain'],
+            content: implode("\r\n", [
+                "54322\t2026-10-16 08:15:01\t0\t1\t0\t0",
+                "54322\t2026-10-16 15:59:59\t1\t1\t0\t0",
+            ])
+        )->assertOk();
+
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-10-16 00:00:00',
+            'check_in_time' => '08:15:01',
+            'check_out_time' => '15:59:59',
+            'status' => 'Undertime',
+        ]);
+    }
+
     public function test_queued_historical_replay_is_returned_to_the_registered_device(): void
     {
         Carbon::setTestNow('2026-10-02 13:00:00');
@@ -156,6 +192,55 @@ class BiometricAttendanceSyncTest extends TestCase
         $this->assertNull($attendance->check_in_time);
         $this->assertSame('18:00:00', $attendance->check_out_time);
         $this->assertSame('Overtime', $attendance->status);
+    }
+
+    public function test_biometric_sync_does_not_merge_into_manual_shift_records(): void
+    {
+        $employee = Employee::create([
+            'user_id' => User::factory()->create()->id,
+            'employee_id' => 'EMP-MANUAL-SHIFT',
+            'first_name' => 'Manual',
+            'last_name' => 'Shift',
+            'email' => 'manual-shift@example.test',
+            'joining_date' => '2026-01-01',
+            'biometric_id' => '24680',
+        ]);
+        $device = BiometricDevice::create([
+            'name' => 'ZKTeco',
+            'serial_number' => 'MANUAL-SHIFT-DEVICE',
+            'sync_mode' => 'push',
+        ]);
+
+        Attendance::create([
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-10-06',
+            'check_out_date' => '2026-10-07',
+            'check_in_time' => '07:15',
+            'check_out_time' => '08:00',
+            'status' => 'Overtime',
+            'source' => 'Manual',
+        ]);
+
+        app(ZktecoAttendanceService::class)->processLogs($device, [[
+            'biometric_id' => '24680',
+            'timestamp' => '2026-10-06 08:30:00',
+            'status' => 0,
+        ]]);
+
+        $this->assertDatabaseCount('attendances', 2);
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-10-06 00:00:00',
+            'source' => 'Manual',
+            'check_in_time' => '07:15',
+            'check_out_date' => '2026-10-07 00:00:00',
+        ]);
+        $this->assertDatabaseHas('attendances', [
+            'employee_id' => $employee->id,
+            'attendance_date' => '2026-10-06 00:00:00',
+            'source' => 'ZKTeco',
+            'check_in_time' => '08:30:00',
+        ]);
     }
 
     public function test_unknown_device_pins_are_skipped_instead_of_creating_placeholder_employees(): void

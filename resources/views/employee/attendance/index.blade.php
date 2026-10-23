@@ -42,6 +42,15 @@
     <div class="col-md-6 col-xl-3">
         <div class="stat-card">
             <div>
+                <div class="stat-label">Undertime</div>
+                <div class="stat-value">{{ $totalUndertime }}</div>
+            </div>
+            <div class="stat-icon" style="background:#fef2f2; color:#ef4444;"><i class="fas fa-hourglass-half"></i></div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card">
+            <div>
                 <div class="stat-label">Late</div>
                 <div class="stat-value">{{ $totalLate }}</div>
             </div>
@@ -80,6 +89,7 @@
                     <tr>
                         <th>Date</th>
                         <th>Check In</th>
+                        <th>Check-out Date</th>
                         <th>Check Out</th>
                         <th>Status</th>
                         <th>Source</th>
@@ -91,12 +101,14 @@
                         <tr>
                             <td>{{ \Illuminate\Support\Carbon::parse($attendance->attendance_date)->format('M d, Y') }}</td>
                             <td>{{ $attendance->check_in_time ? \Illuminate\Support\Carbon::parse($attendance->check_in_time)->format('h:i:s A') : '-' }}</td>
+                            <td>{{ $attendance->check_out_time ? ($attendance->check_out_date?->format('M d, Y') ?? $attendance->attendance_date?->format('M d, Y') ?? '-') : '-' }}</td>
                             <td>{{ $attendance->check_out_time ? \Illuminate\Support\Carbon::parse($attendance->check_out_time)->format('h:i:s A') : '-' }}</td>
                             <td>
                                 @php
                                     $statusClass = match($attendance->status) {
                                         'Present' => 'bg-success',
                                         'Late' => 'bg-warning',
+                                        'Undertime' => 'bg-danger',
                                         'Absent' => 'bg-danger',
                                         'Leave' => 'bg-info',
                                         'Overtime' => 'bg-overtime',
@@ -130,7 +142,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">No attendance records found in the selected date range.</td>
+                            <td colspan="7" class="text-center text-muted py-4">No attendance records found in the selected date range.</td>
                         </tr>
                     @endforelse
                 </tbody>
